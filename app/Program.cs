@@ -5,8 +5,16 @@ namespace PeakRecorder;
 internal static class Program
 {
     [STAThread]
-    private static void Main()
+    private static void Main(string[] args)
     {
+        // Chrome invokes us as a native messaging host with the extension
+        // origin as an argument; handle that mode without any UI.
+        if (args.Any(a => a.StartsWith("chrome-extension://")))
+        {
+            NativeHost.Run();
+            return;
+        }
+
         ApplicationConfiguration.Initialize();
 
         using var mutex = new Mutex(true, "PeakRecorder-single-instance", out var isNew);

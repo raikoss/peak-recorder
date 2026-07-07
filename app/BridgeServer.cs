@@ -93,6 +93,18 @@ public sealed class BridgeServer : IDisposable
                     await WriteJsonAsync(res, new { accepted = true });
                 }
             }
+            else if (path == "register" && ctx.Request.HttpMethod == "POST")
+            {
+                using var reader = new StreamReader(ctx.Request.InputStream, Encoding.UTF8);
+                var body = JsonNode.Parse(await reader.ReadToEndAsync())?.AsObject();
+                var extensionId = body?["extensionId"]?.GetValue<string>();
+                if (extensionId != null)
+                {
+                    try { NativeHost.Register(extensionId); }
+                    catch (Exception ex) { Log.Write($"Native host registration failed: {ex.Message}"); }
+                }
+                await WriteJsonAsync(res, new { accepted = extensionId != null });
+            }
             else if (path == "dump" && ctx.Request.HttpMethod == "POST")
             {
                 using var reader = new StreamReader(ctx.Request.InputStream, Encoding.UTF8);

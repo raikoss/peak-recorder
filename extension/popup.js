@@ -1,4 +1,5 @@
 const $ = (id) => document.getElementById(id);
+const HOST_NAME = "eu.smashthepeak.peakrecorder";
 
 function bridge(path, body, method) {
   return new Promise((resolve) => {
@@ -17,11 +18,30 @@ async function refreshStatus() {
     el.textContent = s.recording
       ? `Recording — vs ${s.opponent || "unknown opponent"}`
       : "Companion app connected, not recording";
+    $("launchRow").style.display = "none";
   } else {
     el.className = "status bad";
-    el.textContent = "Companion app not running (start PeakRecorder.exe)";
+    el.textContent = "Companion app not running";
+    $("launchRow").style.display = "";
   }
 }
+
+$("launchBtn").addEventListener("click", () => {
+  const out = $("launchResult");
+  out.textContent = "Starting…";
+  chrome.runtime.sendNativeMessage(HOST_NAME, { cmd: "start" }, (res) => {
+    if (chrome.runtime.lastError) {
+      // Host not registered yet: the app registers itself the first time it
+      // runs while the extension is installed.
+      out.textContent = "Launch shortcut not set up yet — start PeakRecorder.exe once manually, then this button will work.";
+      return;
+    }
+    out.textContent = res && res.alreadyRunning ? "Already running." : "Started.";
+    // Give the app a moment to boot, then re-check.
+    setTimeout(refreshStatus, 1500);
+    setTimeout(refreshStatus, 4000);
+  });
+});
 
 chrome.storage.local.get(["myName", "myNameAuto", "myIdAuto", "stopOnLeave", "debug"], (v) => {
   $("myName").value = v.myName || "";
