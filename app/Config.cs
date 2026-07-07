@@ -26,6 +26,18 @@ public class Config
     /// </summary>
     public bool DeleteOriginalAfterRemux { get; set; } = true;
 
+    /// <summary>
+    /// Discard the recording when the match ends without a single completed
+    /// game (cancelled / opponent no-show).
+    /// </summary>
+    public bool DiscardUnplayedMatches { get; set; } = true;
+
+    /// <summary>
+    /// Safety cap: never auto-discard a recording longer than this many
+    /// minutes, even if the match looks unplayed.
+    /// </summary>
+    public int DiscardUnplayedMaxMinutes { get; set; } = 10;
+
     public static string Dir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PeakRecorder");
 

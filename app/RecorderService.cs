@@ -22,12 +22,12 @@ public sealed class RecorderService : IDisposable
 
     public RecorderService(Config config) => _config = config;
 
-    public async Task HandleEventAsync(string type, string? matchId, string? opponent, string[]? players)
+    public async Task HandleEventAsync(string type, string? matchId, string? opponent, string[]? players, bool played = true)
     {
         await _gate.WaitAsync();
         try
         {
-            Log.Write($"Event: {type} matchId={matchId} opponent={opponent ?? "?"} players=[{string.Join(", ", players ?? [])}]");
+            Log.Write($"Event: {type} matchId={matchId} opponent={opponent ?? "?"} played={played} players=[{string.Join(", ", players ?? [])}]");
             switch (type)
             {
                 case "match_started":
@@ -54,7 +54,7 @@ public sealed class RecorderService : IDisposable
                     // Ignore stray end-events from a different match page.
                     if (type == "match_ended" && MatchId != null && matchId != null && matchId != MatchId) break;
                     UpdateOpponent(matchId, opponent, players);
-                    await StopRecordingAndRenameAsync();
+                    await StopRecordingAndRenameAsync(ShouldDiscard(type, played));
                     break;
 
                 default:
@@ -100,7 +100,21 @@ public sealed class RecorderService : IDisposable
         Log.Write($"Recording started (opponent: {Opponent ?? "unknown"}).");
     }
 
-    private async Task StopRecordingAndRenameAsync()
+    // Manual stops always keep the file; only auto-detected unplayed matches
+    // are discarded, and never past the safety duration cap.
+    private bool ShouldDiscard(string type, bool played)
+    {
+        if (type != "match_ended" || played || !_config.DiscardUnplayedMatches) return false;
+        var duration = DateTime.Now - _recordingStartedAt;
+        if (duration > TimeSpan.FromMinutes(_config.DiscardUnplayedMaxMinutes))
+        {
+            Log.Write($"Match looks unplayed but recording ran {duration:mm\\:ss}; keeping it to be safe.");
+            return false;
+        }
+        return true;
+    }
+
+    private async Task StopRecordingAndRenameAsync(bool discard = false)
     {
         string? outputPath = null;
         try
@@ -114,13 +128,59 @@ public sealed class RecorderService : IDisposable
         }
         Log.Write($"Recording stopped. File: {outputPath ?? "unknown"}");
 
-        if (outputPath != null)
+        if (outputPath != null && discard)
+        {
+            Log.Write("Match ended without a completed game; discarding the recording.");
+            await DiscardRecordingAsync(outputPath);
+        }
+        else if (outputPath != null)
         {
             var renamed = await RenameRecordingAsync(outputPath);
             Log.Write(renamed != null ? $"Renamed to: {renamed}" : "Rename failed; file kept with original name.");
         }
         Opponent = null;
         MatchId = null;
+    }
+
+    private static async Task DiscardRecordingAsync(string outputPath)
+    {
+        // Delete the recording once OBS releases it (quick), then watch in the
+        // background for the auto-remuxed sibling and delete that too. Only
+        // the first part is awaited so a new match can start immediately.
+        var deleted = await TryDeleteWhenUnlockedAsync(outputPath, TimeSpan.FromSeconds(30));
+        if (!deleted) Log.Write($"Could not discard {outputPath}; OBS kept it locked.");
+
+        var dir = Path.GetDirectoryName(outputPath)!;
+        var baseName = Path.GetFileNameWithoutExtension(outputPath);
+        _ = Task.Run(async () =>
+        {
+            var deadline = DateTime.UtcNow.AddMinutes(5);
+            while (DateTime.UtcNow < deadline)
+            {
+                foreach (var file in Directory.EnumerateFiles(dir, baseName + ".*"))
+                    await TryDeleteWhenUnlockedAsync(file, TimeSpan.Zero);
+                await Task.Delay(2000);
+            }
+        });
+    }
+
+    private static async Task<bool> TryDeleteWhenUnlockedAsync(string path, TimeSpan wait)
+    {
+        var deadline = DateTime.UtcNow + wait;
+        do
+        {
+            try
+            {
+                if (!File.Exists(path)) return false;
+                using (File.Open(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { }
+                File.Delete(path);
+                Log.Write($"Discarded: {path}");
+                return true;
+            }
+            catch (IOException) { /* still locked or remuxing */ }
+            if (DateTime.UtcNow >= deadline) return false;
+            await Task.Delay(1000);
+        } while (true);
     }
 
     private async Task EnsureObsConnectedAsync()

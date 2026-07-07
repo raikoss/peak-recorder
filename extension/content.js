@@ -25,9 +25,11 @@
     myName: null, // manual override from popup
     myIdAuto: null,
     myNameAuto: null,
-    matchId: null, // match we told the app about
+    matchId: null, // match page we are currently on
     opponent: null,
+    startedSent: false, // told the app to start recording
     finishedSent: false,
+    played: false, // did at least one game actually finish?
   };
 
   const log = (...args) => state.debug && console.log(TAG, ...args);
@@ -139,16 +141,28 @@
     /^Server: .*(cancelled|canceled|disqualified)/im,
   ];
 
-  // Returns a string describing WHY the page looks finished, or null.
-  function finishedReason() {
+  function mainText() {
     const main = document.querySelector("main") || document.body;
-    const text = main.innerText || "";
+    return main.innerText || "";
+  }
+
+  // Returns a string describing WHY the page looks finished, or null.
+  function finishedReason(text) {
     for (const re of FINISHED_PATTERNS) {
       const m = re.exec(text);
       if (m) return `text "${m[0].slice(0, 60)}"`;
     }
     return null;
   }
+
+  // Proof the match was actually played: the server chat announces every
+  // completed game. Cancelled/no-show matches never produce this line.
+  const PLAYED_RE = /^Server: [^\n]* won Game \d+/m;
+
+  // The match is "set" once characters and the game-1 stage are picked: the
+  // score panel's status flips to "Players picking winner..." while the game
+  // runs. Line-anchored, so chat ("Name: ...") can't fake it.
+  const READY_RE = /^Players picking winner/m;
 
   // ---- state machine ---------------------------------------------------------
 
@@ -159,56 +173,89 @@
       detectMyId(); // sidebar exists on every page; cache my id early
       if (state.matchId) {
         log("left match page", state.matchId, `(${reason})`);
-        if (state.stopOnLeave && !state.finishedSent) {
-          send("event", { type: "match_ended", matchId: state.matchId, opponent: state.opponent });
+        if (state.stopOnLeave && state.startedSent && !state.finishedSent) {
+          send("event", {
+            type: "match_ended",
+            matchId: state.matchId,
+            opponent: state.opponent,
+            played: state.played,
+          });
         }
         state.matchId = null;
         state.opponent = null;
+        state.startedSent = false;
         state.finishedSent = false;
+        state.played = false;
       }
       return;
     }
 
     const players = getMatchPlayers();
     const opponent = resolveOpponent(players);
-    const finishedWhy = finishedReason();
+    const myId = detectMyId();
+    const iAmPlaying = !!(
+      (myId && players.some((p) => p.id === myId)) ||
+      (state.myName && players.some((p) => p.name.toLowerCase() === state.myName.toLowerCase()))
+    );
+    const text = mainText();
+    const finishedWhy = finishedReason(text);
     const finished = finishedWhy !== null;
+    const played = PLAYED_RE.test(text);
+    // "Set" = stage + characters picked (game running); a completed game or a
+    // finished match also proves it, in case the page was opened mid-game.
+    const ready = READY_RE.test(text) || played;
     log(`evaluate(${reason})`, {
       id,
       players: players.map((p) => `${p.name}#${p.id}`),
-      myId: detectMyId(),
+      myId,
+      iAmPlaying,
       opponent,
+      ready,
       finished,
       finishedWhy,
+      played,
     });
 
     if (state.matchId !== id) {
-      // New match page. Never start recording for an already-finished match
-      // (e.g. browsing old match history).
+      // New match page: reset. If it's already finished (browsing history),
+      // mark it done so we never start recording for it.
       state.matchId = id;
       state.opponent = opponent;
+      state.startedSent = false;
       state.finishedSent = finished;
-      if (!finished) {
+      state.played = played;
+      if (finished) log("match page is already finished, not recording");
+    }
+
+    state.played = state.played || played;
+
+    // Start only when the match is set (characters + stage picked), and only
+    // for matches I'm actually playing in — not ones I spectate.
+    if (!state.startedSent && !state.finishedSent && ready) {
+      if (!iAmPlaying) {
+        log("not a participant in this match, not recording");
+      } else {
+        state.startedSent = true;
+        state.opponent = opponent;
         send("event", {
           type: "match_started",
           matchId: id,
           opponent,
           players: players.map((p) => p.name),
         });
-      } else {
-        log("match page is already finished, not recording");
       }
-      return;
     }
 
-    // Same match: keep opponent info fresh, watch for the end.
-    if (opponent && opponent !== state.opponent) {
+    // Keep opponent info fresh, watch for the end.
+    if (state.startedSent && opponent && opponent !== state.opponent) {
       state.opponent = opponent;
       send("event", { type: "match_update", matchId: id, opponent });
     }
     if (finished && !state.finishedSent) {
       state.finishedSent = true;
-      send("event", { type: "match_ended", matchId: id, opponent: state.opponent });
+      if (state.startedSent) {
+        send("event", { type: "match_ended", matchId: id, opponent: state.opponent, played: state.played });
+      }
     }
   }
 
@@ -276,11 +323,16 @@
 
   // If the tab/browser closes mid-match, try to stop the recording.
   window.addEventListener("pagehide", () => {
-    if (state.matchId && state.stopOnLeave && !state.finishedSent) {
+    if (state.matchId && state.stopOnLeave && state.startedSent && !state.finishedSent) {
       try {
         navigator.sendBeacon(
           "http://127.0.0.1:8123/event",
-          JSON.stringify({ type: "match_ended", matchId: state.matchId, opponent: state.opponent })
+          JSON.stringify({
+            type: "match_ended",
+            matchId: state.matchId,
+            opponent: state.opponent,
+            played: state.played,
+          })
         );
       } catch (_) {}
     }

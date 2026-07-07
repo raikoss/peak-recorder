@@ -30,6 +30,8 @@ Config lives at `%APPDATA%\PeakRecorder\config.json` (tray menu → *Open config
 | `ObsWsPort` / `ObsWsPassword` | `null` | Overrides; by default read from OBS's own websocket config |
 | `FilenameTemplate` | `{date}_{time}_vs_{opponent}` | Also supports `{matchId}` |
 | `DeleteOriginalAfterRemux` | `true` | With OBS auto-remux (mkv → mp4): delete the `.mkv` once the renamed `.mp4` looks complete (≥90% of the original's size) |
+| `DiscardUnplayedMatches` | `true` | Delete the recording when the match ends without a single completed game (cancel / no-show) |
+| `DiscardUnplayedMaxMinutes` | `10` | Never auto-discard a recording longer than this, even if the match looks unplayed |
 
 A log is written to `%APPDATA%\PeakRecorder\log.txt` (tray menu → *Open log*).
 
@@ -58,7 +60,8 @@ The extension popup also has manual **Start/Stop recording** buttons as a fallba
 Detection was tuned against real page dumps (2026-07-07):
 
 - **You** are identified by player *ID*: the "Active Player" sidebar contains an avatar-only link to `/en/player/<id>` next to the `/en/settings/user` link.
-- **Match players**: the match page has exactly two named `/en/player/<id>` links; the one that isn't you is the opponent.
+- **Match players**: the match page has exactly two named `/en/player/<id>` links; the one that isn't you is the opponent. Matches you spectate (where your ID isn't a participant) are never recorded.
+- **Recording start**: not at match creation, but once characters and the game-1 stage are picked — the score panel's status flips to `Players picking winner...` (a completed game also counts, in case the page is opened mid-game).
 - **Match end**: the score panel's `<name> won this match.` line, or server chat lines (`Server: … won the Match`, `Server: Match concluded`). Patterns are anchored so typed chat messages can't trigger them.
 
 To debug, keep **Debug logging** on in the popup and watch the DevTools console for `[PeakRecorder]` lines. If the site's markup changes, click **Dump page for debugging** in the popup — it saves the page structure to `%APPDATA%\PeakRecorder\dumps\` for re-tuning `extension/content.js`.
