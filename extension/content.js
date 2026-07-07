@@ -363,7 +363,7 @@
         myIdAuto: state.myIdAuto,
         myNameAuto: state.myNameAuto,
         detectedPlayers: getMatchPlayers(),
-        finishedWhy: finishedReason(),
+        finishedWhy: finishedReason(main.innerText || ""),
         anchors,
         headings: [...document.querySelectorAll("h1,h2,h3,h4")].slice(0, 60).map((h) => ({
           tag: h.tagName,
