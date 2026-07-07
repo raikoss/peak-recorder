@@ -20,6 +20,12 @@ public class Config
     /// <summary>Filename template. Placeholders: {date}, {time}, {opponent}, {matchId}.</summary>
     public string FilenameTemplate { get; set; } = "{date}_{time}_vs_{opponent}";
 
+    /// <summary>
+    /// When OBS auto-remuxes the recording (e.g. mkv -> mp4), delete the
+    /// original file once the remuxed copy is renamed and looks complete.
+    /// </summary>
+    public bool DeleteOriginalAfterRemux { get; set; } = true;
+
     public static string Dir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PeakRecorder");
 

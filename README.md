@@ -29,6 +29,7 @@ Config lives at `%APPDATA%\PeakRecorder\config.json` (tray menu → *Open config
 | `ObsLaunchArgs` | `--disable-shutdown-check --minimize-to-tray` | Args when launching OBS |
 | `ObsWsPort` / `ObsWsPassword` | `null` | Overrides; by default read from OBS's own websocket config |
 | `FilenameTemplate` | `{date}_{time}_vs_{opponent}` | Also supports `{matchId}` |
+| `DeleteOriginalAfterRemux` | `true` | With OBS auto-remux (mkv → mp4): delete the `.mkv` once the renamed `.mp4` looks complete (≥90% of the original's size) |
 
 A log is written to `%APPDATA%\PeakRecorder\log.txt` (tray menu → *Open log*).
 

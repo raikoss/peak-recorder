@@ -218,7 +218,7 @@ public sealed class RecorderService : IDisposable
                     // OBS's "automatically remux to mp4" writes a sibling file
                     // with the original name after the recording stops.
                     _ = RenameRemuxedSiblingAsync(outputPath, Path.Combine(
-                        Path.GetDirectoryName(target)!, Path.GetFileNameWithoutExtension(target)));
+                        Path.GetDirectoryName(target)!, Path.GetFileNameWithoutExtension(target)), target);
                     return target;
                 }
             }
@@ -228,7 +228,7 @@ public sealed class RecorderService : IDisposable
         return null;
     }
 
-    private static async Task RenameRemuxedSiblingAsync(string originalPath, string targetWithoutExt)
+    private async Task RenameRemuxedSiblingAsync(string originalPath, string targetWithoutExt, string renamedOriginal)
     {
         var dir = Path.GetDirectoryName(originalPath)!;
         var origBase = Path.GetFileNameWithoutExtension(originalPath);
@@ -251,6 +251,7 @@ public sealed class RecorderService : IDisposable
                         target = $"{targetWithoutExt}_{i}{ext}";
                     File.Move(sibling, target);
                     Log.Write($"Renamed remuxed file to: {target}");
+                    DeleteOriginalIfSafe(renamedOriginal, target);
                     return;
                 }
                 catch (IOException) { /* remux still in progress */ }
@@ -258,6 +259,32 @@ public sealed class RecorderService : IDisposable
             await Task.Delay(2000);
         }
         Log.Write("No remuxed sibling appeared within 5 minutes (expected if auto-remux is off).");
+    }
+
+    // A remux is a lossless container swap, so the copy should be roughly the
+    // same size as the original. Only delete when that holds — a truncated or
+    // failed remux must never cost the only good recording.
+    private void DeleteOriginalIfSafe(string original, string remuxed)
+    {
+        if (!_config.DeleteOriginalAfterRemux) return;
+        try
+        {
+            var origSize = new FileInfo(original).Length;
+            var remuxSize = new FileInfo(remuxed).Length;
+            if (remuxSize >= origSize * 0.9)
+            {
+                File.Delete(original);
+                Log.Write($"Deleted original recording: {original}");
+            }
+            else
+            {
+                Log.Write($"Kept original: remuxed file looks incomplete ({remuxSize} vs {origSize} bytes).");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"Could not delete original recording: {ex.Message}");
+        }
     }
 
     private static string Sanitize(string s)
