@@ -51,18 +51,24 @@ public class Config
 
     public static Config Load()
     {
-        try
+        if (File.Exists(FilePath))
         {
-            if (File.Exists(FilePath))
-                return JsonSerializer.Deserialize<Config>(File.ReadAllText(FilePath)) ?? new Config();
+            try
+            {
+                var cfg = JsonSerializer.Deserialize<Config>(File.ReadAllText(FilePath)) ?? new Config();
+                cfg.Save(); // rewrite so keys added in newer versions show up in the file
+                return cfg;
+            }
+            catch (Exception ex)
+            {
+                // Don't overwrite the user's (possibly hand-edited) file.
+                Log.Write($"Failed to read config, using defaults without saving: {ex.Message}");
+                return new Config();
+            }
         }
-        catch (Exception ex)
-        {
-            Log.Write($"Failed to read config, using defaults: {ex.Message}");
-        }
-        var cfg = new Config();
-        cfg.Save();
-        return cfg;
+        var fresh = new Config();
+        fresh.Save();
+        return fresh;
     }
 
     public void Save()
