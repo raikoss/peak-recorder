@@ -55,13 +55,13 @@ Nothing to do. If OBS is closed, the app enables the WebSocket server in OBS's c
 
 The extension popup also has manual **Start/Stop recording** buttons as a fallback, and the tray menu has the same.
 
-### Toolbar icon
+### Connection status
 
-- **Gray dot + orange `!`** — companion app not reachable
-- **Green dot** — connected, idle
-- **Red dot + `REC`** — recording
+While on smashthepeak.eu with the companion app unreachable, the extension shows a highlighted **banner on the page** ("The recorder app is not running…") with a **Start recorder app** button; it turns green and disappears once the app is up. Dismissing it silences the warning until the app has reconnected once. Checked every 15 seconds.
 
-Refreshed every 30 seconds and on every match event. When the app is unreachable, the popup shows a **Start companion app** button. That button uses Chrome native messaging: the app registers itself as the host (`eu.smashthepeak.peakrecorder`, written to `%APPDATA%\PeakRecorder\nativehost.json` + `HKCU\Software\Google\Chrome\NativeMessagingHosts`) the first time it runs while the extension is installed — so run `PeakRecorder.exe` manually once before relying on the button.
+The toolbar icon also reflects the state (gray + `!` = unreachable, green = connected, red + `REC` = recording), but some Chromium forks (Arc) don't render dynamically drawn icons — the banner is the reliable signal there.
+
+Both the banner button and the popup's **Start companion app** button use Chrome native messaging: the app registers itself as the host (`eu.smashthepeak.peakrecorder`, written to `%APPDATA%\PeakRecorder\nativehost.json` + `HKCU\Software\Google\Chrome\NativeMessagingHosts`) the first time it runs while the extension is installed — so run `PeakRecorder.exe` manually once before relying on the buttons.
 
 ## Detection details
 

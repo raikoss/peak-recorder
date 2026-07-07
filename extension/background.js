@@ -4,6 +4,7 @@
 // native-messaging launch shortcut works.
 
 const BRIDGE_BASE = "http://127.0.0.1:8123";
+const HOST_NAME = "eu.smashthepeak.peakrecorder";
 
 let registeredThisLife = false;
 
@@ -69,6 +70,17 @@ checkStatus(); // also on every service-worker wake-up
 // ---- bridge relay ----------------------------------------------------------
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg && msg.kind === "launchApp") {
+    // Content scripts can't use native messaging; relay for the page banner.
+    chrome.runtime.sendNativeMessage(HOST_NAME, { cmd: "start" }, (res) => {
+      if (chrome.runtime.lastError) {
+        sendResponse({ ok: false, error: chrome.runtime.lastError.message });
+      } else {
+        sendResponse({ ok: true, data: res });
+      }
+    });
+    return true;
+  }
   if (msg && msg.kind === "bridge") {
     const opts = {
       method: msg.method || "POST",

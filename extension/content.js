@@ -259,6 +259,91 @@
     }
   }
 
+  // ---- companion-app banner --------------------------------------------------
+  // Arc doesn't render dynamic toolbar icons, so warn in the page itself when
+  // the companion app is down. A fixed overlay on <body> survives the site's
+  // React re-renders (unlike nodes injected into the chat).
+
+  let banner = null;
+  let bannerDismissed = false;
+
+  function removeBanner() {
+    banner?.remove();
+    banner = null;
+  }
+
+  function showBanner() {
+    if (banner || bannerDismissed) return;
+    banner = document.createElement("div");
+    banner.style.cssText =
+      "position:fixed;bottom:16px;right:16px;z-index:2147483647;max-width:340px;" +
+      "background:#1f2937;color:#f9fafb;border:2px solid #f59e0b;border-radius:10px;" +
+      "padding:12px 14px;font:13px/1.4 system-ui,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.5)";
+    banner.innerHTML =
+      '<div style="display:flex;align-items:baseline;gap:8px">' +
+      '<b style="color:#f59e0b">Smash the Peak Recorder</b>' +
+      '<span data-stp="close" style="margin-left:auto;cursor:pointer;color:#9ca3af;font-size:15px">&#10005;</span>' +
+      "</div>" +
+      '<div data-stp="text" style="margin:6px 0 10px">The recorder app is not running &mdash; your matches will NOT be recorded.</div>' +
+      '<button data-stp="start" style="background:#f59e0b;color:#111;border:0;border-radius:6px;padding:6px 12px;font-weight:600;cursor:pointer">Start recorder app</button>';
+    document.body.appendChild(banner);
+
+    banner.querySelector('[data-stp="close"]').addEventListener("click", () => {
+      bannerDismissed = true; // until it reconnects once
+      removeBanner();
+    });
+    const el = banner;
+    banner.querySelector('[data-stp="start"]').addEventListener("click", () => {
+      const text = el.querySelector('[data-stp="text"]');
+      const btn = el.querySelector('[data-stp="start"]');
+      btn.disabled = true;
+      text.textContent = "Starting the recorder app…";
+      chrome.runtime.sendMessage({ kind: "launchApp" }, (res) => {
+        if (chrome.runtime.lastError || !res || !res.ok) {
+          text.textContent =
+            "Could not launch automatically — start PeakRecorder.exe manually once, then this button will work.";
+          btn.disabled = false;
+          return;
+        }
+        // Poll until the bridge answers, then confirm and fade out.
+        let tries = 0;
+        const poll = setInterval(() => {
+          chrome.runtime.sendMessage({ kind: "bridge", path: "status", method: "GET" }, (r) => {
+            if (!el.isConnected) {
+              clearInterval(poll);
+              return;
+            }
+            if (r && r.ok) {
+              clearInterval(poll);
+              el.style.borderColor = "#22c55e";
+              text.innerHTML = '<span style="color:#22c55e">Recorder connected ✓</span>';
+              btn.remove();
+              setTimeout(removeBanner, 3000);
+            } else if (++tries > 10) {
+              clearInterval(poll);
+              text.textContent = "App launched but not reachable yet — check the system tray.";
+              btn.disabled = false;
+            }
+          });
+        }, 1000);
+      });
+    });
+  }
+
+  function checkCompanion() {
+    chrome.runtime.sendMessage({ kind: "bridge", path: "status", method: "GET" }, (res) => {
+      if (chrome.runtime.lastError || !res || !res.ok) {
+        showBanner();
+      } else {
+        bannerDismissed = false; // re-warn on the next outage
+        removeBanner();
+      }
+    });
+  }
+
+  checkCompanion();
+  setInterval(checkCompanion, 15000);
+
   // ---- diagnostics dump ------------------------------------------------------
 
   // Popup's "Dump page" button: capture the page structure so the detection
