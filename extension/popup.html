@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body { font-family: system-ui, sans-serif; width: 280px; padding: 12px; margin: 0; }
+    h1 { font-size: 14px; margin: 0 0 8px; }
+    .row { margin: 8px 0; }
+    .status { padding: 6px 8px; border-radius: 6px; font-size: 12px; }
+    .ok { background: #e6f7e6; color: #1a6b1a; }
+    .bad { background: #fdeaea; color: #a02020; }
+    label { font-size: 12px; display: block; margin-bottom: 2px; color: #444; }
+    input[type=text] { width: 100%; box-sizing: border-box; padding: 4px 6px; }
+    button { padding: 5px 10px; margin-right: 6px; cursor: pointer; }
+    .small { font-size: 11px; color: #777; }
+  </style>
+</head>
+<body>
+  <h1>Smash the Peak Recorder</h1>
+  <div id="status" class="status bad">Checking companion app…</div>
+
+  <div class="row">
+    <label for="myName">Your player name (leave empty to auto-detect)</label>
+    <input type="text" id="myName" placeholder="auto" />
+    <div class="small" id="autoName"></div>
+  </div>
+
+  <div class="row">
+    <label><input type="checkbox" id="stopOnLeave" /> Stop recording when leaving the match page</label>
+    <label><input type="checkbox" id="debug" /> Debug logging (DevTools console)</label>
+  </div>
+
+  <div class="row">
+    <button id="startBtn">Start recording</button>
+    <button id="stopBtn">Stop recording</button>
+  </div>
+  <div class="small">Manual buttons talk directly to OBS via the companion app.</div>
+
+  <div class="row">
+    <button id="dumpBtn">Dump page for debugging</button>
+    <div class="small" id="dumpResult"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

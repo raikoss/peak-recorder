@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Smash the Peak Recorder",
+  "version": "0.1.0",
+  "description": "Starts/stops OBS recording automatically when you play a match on smashthepeak.eu (requires the PeakRecorder companion app).",
+  "permissions": ["storage"],
+  "host_permissions": ["http://127.0.0.1:8123/*"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://www.smashthepeak.eu/*", "https://smashthepeak.eu/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Smash the Peak Recorder"
+  }
+}
