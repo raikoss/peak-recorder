@@ -29,7 +29,6 @@
     opponent: null,
     startedSent: false, // told the app to start recording
     finishedSent: false,
-    played: false, // did at least one game actually finish?
   };
 
   const log = (...args) => state.debug && console.log(TAG, ...args);
@@ -155,9 +154,9 @@
     return null;
   }
 
-  // Proof the match was actually played: the server chat announces every
-  // completed game. Cancelled/no-show matches never produce this line.
-  const PLAYED_RE = /^Server: [^\n]* won Game \d+/m;
+  // The server chat announces every completed game — proof the match is well
+  // past the pick phase, in case the page is opened mid-set.
+  const GAME_WON_RE = /^Server: [^\n]* won Game \d+/m;
 
   // The match is "set" once characters and the game-1 stage are picked: the
   // score panel's status flips to "Select the winner." while the game runs
@@ -191,14 +190,12 @@
             type: "match_ended",
             matchId: state.matchId,
             opponent: state.opponent,
-            played: state.played,
           });
         }
         state.matchId = null;
         state.opponent = null;
         state.startedSent = false;
         state.finishedSent = false;
-        state.played = false;
       }
       return;
     }
@@ -213,11 +210,10 @@
     const text = mainText();
     const finishedWhy = finishedReason(text);
     const finished = finishedWhy !== null;
-    const played = PLAYED_RE.test(text);
-    // "Set" = stage + characters picked (game running); a completed game or a
-    // finished match also proves it, in case the page was opened mid-game.
+    // "Set" = stage + characters picked (game running); a completed game also
+    // proves it, in case the page was opened mid-set.
     const stage = stagePicked();
-    const ready = stage || READY_RE.test(text) || played;
+    const ready = stage || READY_RE.test(text) || GAME_WON_RE.test(text);
     log(`evaluate(${reason})`, {
       id,
       players: players.map((p) => `${p.name}#${p.id}`),
@@ -228,7 +224,6 @@
       ready,
       finished,
       finishedWhy,
-      played,
     });
 
     if (state.matchId !== id) {
@@ -238,11 +233,8 @@
       state.opponent = opponent;
       state.startedSent = false;
       state.finishedSent = finished;
-      state.played = played;
       if (finished) log("match page is already finished, not recording");
     }
-
-    state.played = state.played || played;
 
     // Start only when the match is set (characters + stage picked), and only
     // for matches I'm actually playing in — not ones I spectate.
@@ -269,7 +261,7 @@
     if (finished && !state.finishedSent) {
       state.finishedSent = true;
       if (state.startedSent) {
-        send("event", { type: "match_ended", matchId: id, opponent: state.opponent, played: state.played });
+        send("event", { type: "match_ended", matchId: id, opponent: state.opponent });
       }
     }
   }
@@ -432,7 +424,6 @@
             type: "match_ended",
             matchId: state.matchId,
             opponent: state.opponent,
-            played: state.played,
           })
         );
       } catch (_) {}

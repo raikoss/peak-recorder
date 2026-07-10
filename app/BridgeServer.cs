@@ -88,8 +88,7 @@ public sealed class BridgeServer : IDisposable
                         type,
                         body["matchId"]?.GetValue<string>(),
                         body["opponent"]?.GetValue<string>(),
-                        players,
-                        body["played"]?.GetValue<bool>() ?? true);
+                        players);
                     await WriteJsonAsync(res, new { accepted = true });
                 }
             }
