@@ -21,6 +21,13 @@ public class Config
     public string FilenameTemplate { get; set; } = "{date}_{time}_vs_{opponent}";
 
     /// <summary>
+    /// Folder to move finished recordings into (created if missing; supports
+    /// environment variables like %USERPROFILE%). null = leave them in OBS's
+    /// own output folder.
+    /// </summary>
+    public string? RecordingsFolder { get; set; }
+
+    /// <summary>
     /// When OBS auto-remuxes the recording (e.g. mkv -> mp4), delete the
     /// original file once the remuxed copy is renamed and looks complete.
     /// </summary>

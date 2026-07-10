@@ -250,11 +250,30 @@ public sealed class RecorderService : IDisposable
 
     // ---- renaming --------------------------------------------------------------
 
+    // Where finished recordings end up: the configured RecordingsFolder, or
+    // the file's own (= OBS's output) folder when unset or unusable.
+    private string ResolveTargetDir(string outputPath)
+    {
+        var dir = Path.GetDirectoryName(outputPath)!;
+        if (string.IsNullOrWhiteSpace(_config.RecordingsFolder)) return dir;
+        try
+        {
+            var target = Path.GetFullPath(Environment.ExpandEnvironmentVariables(_config.RecordingsFolder));
+            Directory.CreateDirectory(target);
+            return target;
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"Cannot use RecordingsFolder '{_config.RecordingsFolder}': {ex.Message}; keeping the file in OBS's output folder.");
+            return dir;
+        }
+    }
+
     private async Task<string?> RenameRecordingAsync(string outputPath)
     {
-        var dir = Path.GetDirectoryName(outputPath);
         var ext = Path.GetExtension(outputPath);
-        if (dir == null) return null;
+        if (Path.GetDirectoryName(outputPath) == null) return null;
+        var dir = ResolveTargetDir(outputPath);
 
         var name = _config.FilenameTemplate
             .Replace("{date}", _recordingStartedAt.ToString("yyyy-MM-dd"))

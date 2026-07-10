@@ -29,6 +29,7 @@ Config lives at `%APPDATA%\PeakRecorder\config.json` (tray menu → *Open config
 | `ObsLaunchArgs` | `--disable-shutdown-check --minimize-to-tray` | Args when launching OBS |
 | `ObsWsPort` / `ObsWsPassword` | `null` | Overrides; by default read from OBS's own websocket config |
 | `FilenameTemplate` | `{date}_{time}_vs_{opponent}` | Also supports `{matchId}` |
+| `RecordingsFolder` | `null` | Move finished recordings here (created if missing; `%VARS%` expanded; other drives OK). `null` = leave them in OBS's output folder |
 | `DeleteOriginalAfterRemux` | `true` | With OBS auto-remux (mkv → mp4): delete the `.mkv` once the renamed `.mp4` looks complete (≥90% of the original's size) |
 | `DiscardUnplayedMatches` | `true` | Delete the recording when the match ends without a single completed game (cancel / no-show) |
 | `DiscardUnplayedMaxMinutes` | `10` | Never auto-discard a recording longer than this, even if the match looks unplayed |
