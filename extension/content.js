@@ -160,9 +160,22 @@
   const PLAYED_RE = /^Server: [^\n]* won Game \d+/m;
 
   // The match is "set" once characters and the game-1 stage are picked: the
-  // score panel's status flips to "Players picking winner..." while the game
-  // runs. Line-anchored, so chat ("Name: ...") can't fake it.
-  const READY_RE = /^Players picking winner/m;
+  // score panel's status flips to "Select the winner." while the game runs
+  // (participant view — spectators see "Players picking winner...", but we
+  // only ever record matches we play in). Line-anchored, so chat
+  // ("Name: ...") can't fake it. Earlier statuses: "Pick your character.",
+  // "Opponent banning stages..." (dumps 2026-07-10).
+  const READY_RE = /^Select the winner/m;
+
+  // Backup signal: during stage striking the page shows the whole stage grid
+  // (9 splash images); once the stage is locked in, exactly one remains.
+  function stagePicked() {
+    const main = document.querySelector("main") || document.body;
+    const srcs = new Set(
+      [...main.querySelectorAll('img[src*="/images/stages/"]')].map((i) => i.getAttribute("src"))
+    );
+    return srcs.size === 1;
+  }
 
   // ---- state machine ---------------------------------------------------------
 
@@ -203,13 +216,15 @@
     const played = PLAYED_RE.test(text);
     // "Set" = stage + characters picked (game running); a completed game or a
     // finished match also proves it, in case the page was opened mid-game.
-    const ready = READY_RE.test(text) || played;
+    const stage = stagePicked();
+    const ready = stage || READY_RE.test(text) || played;
     log(`evaluate(${reason})`, {
       id,
       players: players.map((p) => `${p.name}#${p.id}`),
       myId,
       iAmPlaying,
       opponent,
+      stagePicked: stage,
       ready,
       finished,
       finishedWhy,
@@ -364,6 +379,7 @@
         myNameAuto: state.myNameAuto,
         detectedPlayers: getMatchPlayers(),
         finishedWhy: finishedReason(main.innerText || ""),
+        stagePicked: stagePicked(),
         anchors,
         headings: [...document.querySelectorAll("h1,h2,h3,h4")].slice(0, 60).map((h) => ({
           tag: h.tagName,

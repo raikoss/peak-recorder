@@ -69,7 +69,7 @@ Detection was tuned against real page dumps (2026-07-07):
 
 - **You** are identified by player *ID*: the "Active Player" sidebar contains an avatar-only link to `/en/player/<id>` next to the `/en/settings/user` link.
 - **Match players**: the match page has exactly two named `/en/player/<id>` links; the one that isn't you is the opponent. Matches you spectate (where your ID isn't a participant) are never recorded.
-- **Recording start**: not at match creation, but once characters and the game-1 stage are picked — the score panel's status flips to `Players picking winner...` (a completed game also counts, in case the page is opened mid-game).
+- **Recording start**: not at match creation, but once characters and the game-1 stage are picked — the score panel's status flips to `Select the winner.` (participant view; spectators see `Players picking winner...`, but spectated matches are never recorded anyway). Backup signals: exactly one stage splash image on the page (the striking grid shows all 9; the locked-in stage shows 1), or a completed game (in case the page is opened mid-game).
 - **Match end**: the score panel's `<name> won this match.` line, or server chat lines (`Server: … won the Match`, `Server: Match concluded`). Patterns are anchored so typed chat messages can't trigger them.
 
 To debug, keep **Debug logging** on in the popup and watch the DevTools console for `[PeakRecorder]` lines. If the site's markup changes, click **Dump page for debugging** in the popup — it saves the page structure to `%APPDATA%\PeakRecorder\dumps\` for re-tuning `extension/content.js`.
