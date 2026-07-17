@@ -10,17 +10,35 @@ namespace PeakRecorder;
 public sealed class RecorderService : IDisposable
 {
     private readonly Config _config;
+    private readonly Store _store;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private ObsWebSocketClient? _obs;
 
     public bool IsRecording { get; private set; }
     public string? Opponent { get; private set; }
     public string? MatchId { get; private set; }
+
+    /// <summary>Id of the Store MatchRecord for the current/last recording,
+    /// so the main window can attach notes to it.</summary>
+    public string? CurrentMatchRecordId { get; private set; }
+
     private DateTime _recordingStartedAt;
 
     public event Action? StateChanged;
 
-    public RecorderService(Config config) => _config = config;
+    /// <summary>Fired when the extension resolves an opponent during stage
+    /// striking, before the match is actually "ready" to record.</summary>
+    public event Action<string>? MatchFound;
+
+    /// <summary>Fired when a found match goes away before it started (page
+    /// left, match cancelled) — the UI should dismiss any briefing shown.</summary>
+    public event Action? MatchDismissed;
+
+    public RecorderService(Config config, Store store)
+    {
+        _config = config;
+        _store = store;
+    }
 
     public async Task HandleEventAsync(string type, string? matchId, string? opponent, string[]? players)
     {
@@ -42,6 +60,17 @@ public sealed class RecorderService : IDisposable
                     Opponent = null; // don't carry a stale opponent into a new recording
                     UpdateOpponent(matchId, opponent, players);
                     await StartRecordingAsync();
+                    break;
+
+                case "match_found":
+                    UpdateOpponent(matchId, opponent, players);
+                    if (!string.IsNullOrWhiteSpace(Opponent)) MatchFound?.Invoke(Opponent);
+                    break;
+
+                case "match_dismissed":
+                    MatchId = null;
+                    Opponent = null;
+                    MatchDismissed?.Invoke();
                     break;
 
                 case "match_update":
@@ -97,8 +126,14 @@ public sealed class RecorderService : IDisposable
         }
         IsRecording = true;
         _recordingStartedAt = DateTime.Now;
+        CurrentMatchRecordId = _store.StartMatch(MatchId ?? "", Opponent ?? "unknown").Id;
         Log.Write($"Recording started (opponent: {Opponent ?? "unknown"}).");
     }
+
+    /// <summary>Seconds elapsed since the current recording started — used to
+    /// timestamp notes taken while a match is live.</summary>
+    public int RecordingElapsedSeconds =>
+        IsRecording ? (int)(DateTime.Now - _recordingStartedAt).TotalSeconds : 0;
 
     private async Task StopRecordingAndRenameAsync()
     {
@@ -114,11 +149,16 @@ public sealed class RecorderService : IDisposable
         }
         Log.Write($"Recording stopped. File: {outputPath ?? "unknown"}");
 
+        var recordId = CurrentMatchRecordId;
+        string? finalPath = outputPath;
         if (outputPath != null)
         {
-            var renamed = await RenameRecordingAsync(outputPath);
+            var renamed = await RenameRecordingAsync(outputPath, recordId);
             Log.Write(renamed != null ? $"Renamed to: {renamed}" : "Rename failed; file kept with original name.");
+            if (renamed != null) finalPath = renamed;
         }
+        if (recordId != null) _store.EndMatch(recordId, finalPath);
+        CurrentMatchRecordId = null;
         Opponent = null;
         MatchId = null;
     }
@@ -209,7 +249,7 @@ public sealed class RecorderService : IDisposable
         }
     }
 
-    private async Task<string?> RenameRecordingAsync(string outputPath)
+    private async Task<string?> RenameRecordingAsync(string outputPath, string? recordId)
     {
         var ext = Path.GetExtension(outputPath);
         if (Path.GetDirectoryName(outputPath) == null) return null;
@@ -237,7 +277,7 @@ public sealed class RecorderService : IDisposable
                     // OBS's "automatically remux to mp4" writes a sibling file
                     // with the original name after the recording stops.
                     _ = RenameRemuxedSiblingAsync(outputPath, Path.Combine(
-                        Path.GetDirectoryName(target)!, Path.GetFileNameWithoutExtension(target)), target);
+                        Path.GetDirectoryName(target)!, Path.GetFileNameWithoutExtension(target)), target, recordId);
                     return target;
                 }
             }
@@ -247,7 +287,7 @@ public sealed class RecorderService : IDisposable
         return null;
     }
 
-    private async Task RenameRemuxedSiblingAsync(string originalPath, string targetWithoutExt, string renamedOriginal)
+    private async Task RenameRemuxedSiblingAsync(string originalPath, string targetWithoutExt, string renamedOriginal, string? recordId)
     {
         var dir = Path.GetDirectoryName(originalPath)!;
         var origBase = Path.GetFileNameWithoutExtension(originalPath);
@@ -271,6 +311,7 @@ public sealed class RecorderService : IDisposable
                     File.Move(sibling, target);
                     Log.Write($"Renamed remuxed file to: {target}");
                     DeleteOriginalIfSafe(renamedOriginal, target);
+                    if (recordId != null) _store.EndMatch(recordId, target);
                     return;
                 }
                 catch (IOException) { /* remux still in progress */ }

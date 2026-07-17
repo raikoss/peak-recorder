@@ -1,0 +1,234 @@
+using System.Diagnostics;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.WinForms;
+
+namespace PeakRecorder;
+
+/// <summary>
+/// Main library / player / settings window (design turns 2a/2b/2c). One
+/// WebView2 hosting a small hand-rolled SPA in Assets/main.html; state is
+/// pushed down as JSON on every change, actions come back as JSON messages.
+/// </summary>
+internal sealed class MainWindow : Form
+{
+    private readonly Config _config;
+    private readonly Store _store;
+    private readonly RecorderService _recorder;
+    private readonly WebView2 _web = new() { Dock = DockStyle.Fill };
+
+    private string _page = "library";
+    private string? _playerName;
+
+    private static readonly JsonSerializerOptions JsonOpts = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
+
+    public MainWindow(Config config, Store store, RecorderService recorder)
+    {
+        _config = config;
+        _store = store;
+        _recorder = recorder;
+
+        Text = "PeakRecorder";
+        ClientSize = new Size(1080, 680);
+        MinimumSize = new Size(760, 480);
+        StartPosition = FormStartPosition.CenterScreen;
+        BackColor = Color.FromArgb(0x10, 0x14, 0x26);
+        Controls.Add(_web);
+
+        _store.Changed += PushStateOnUiThread;
+        _recorder.StateChanged += PushStateOnUiThread;
+
+        FormClosed += (_, _) =>
+        {
+            _store.Changed -= PushStateOnUiThread;
+            _recorder.StateChanged -= PushStateOnUiThread;
+        };
+
+        _ = InitAsync();
+    }
+
+    private async Task InitAsync()
+    {
+        try
+        {
+            var env = await BriefingRuntime.GetEnvironmentAsync();
+            await _web.EnsureCoreWebView2Async(env);
+            _web.CoreWebView2.WebMessageReceived += (_, e) => HandleMessage(e.TryGetWebMessageAsString());
+
+            var htmlPath = Path.Combine(AppContext.BaseDirectory, "Assets", "main.html");
+            var found = File.Exists(htmlPath);
+            var html = found
+                ? File.ReadAllText(htmlPath)
+                : "<body style='background:#101426;color:#fff;font-family:sans-serif;padding:20px'>Assets/main.html not found next to the executable.</body>";
+            Log.Write($"MainWindow loading html from {htmlPath} (found={found}, length={html.Length})");
+
+            _web.CoreWebView2.NavigationCompleted += (_, e) =>
+            {
+                Log.Write($"MainWindow NavigationCompleted success={e.IsSuccess} status={e.WebErrorStatus}");
+                PushState();
+            };
+            _web.CoreWebView2.NavigateToString(html);
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"MainWindow WebView2 init failed: {ex}");
+            MessageBox.Show($"Could not open the PeakRecorder window:\n{ex.Message}",
+                "PeakRecorder", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            Close();
+        }
+    }
+
+    private void PushStateOnUiThread()
+    {
+        if (IsDisposed) return;
+        if (InvokeRequired) BeginInvoke(PushState);
+        else PushState();
+    }
+
+    private void PushState()
+    {
+        if (_web.CoreWebView2 == null) return;
+        var snapshot = _store.Snapshot();
+        var payload = new
+        {
+            page = _page,
+            playerName = _playerName,
+            focusGoal = snapshot.FocusGoal,
+            matches = snapshot.Matches,
+            gamePlans = snapshot.GamePlans,
+            recording = new
+            {
+                isRecording = _recorder.IsRecording,
+                opponent = _recorder.Opponent,
+                matchId = _recorder.MatchId,
+                currentMatchRecordId = _recorder.CurrentMatchRecordId,
+            },
+            config = new
+            {
+                obsExePath = _config.ObsExePath,
+                filenameTemplate = _config.FilenameTemplate,
+                recordingsFolder = _config.RecordingsFolder,
+                deleteOriginalAfterRemux = _config.DeleteOriginalAfterRemux,
+            },
+        };
+        var json = JsonSerializer.Serialize(payload, JsonOpts);
+        _ = PushStateScriptAsync(json);
+    }
+
+    private async Task PushStateScriptAsync(string json)
+    {
+        try
+        {
+            var result = await _web.CoreWebView2.ExecuteScriptAsync("window.__applyState(" + json + ")");
+            Log.Write($"PushState executed, result={result}");
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"PushState script failed: {ex}");
+        }
+    }
+
+    private void HandleMessage(string? raw)
+    {
+        if (raw == null) return;
+        JsonObject? msg;
+        try { msg = JsonNode.Parse(raw)?.AsObject(); }
+        catch { return; }
+        var action = msg?["action"]?.GetValue<string>();
+        if (action == null) return;
+
+        try
+        {
+            switch (action)
+            {
+                case "jsError":
+                    Log.Write($"MainWindow JS error: {msg!["message"]?.GetValue<string>()} " +
+                              $"(line {msg["lineno"]}, col {msg["colno"]})\n{msg["stack"]?.GetValue<string>()}");
+                    break;
+
+                case "navigate":
+                    _page = msg!["page"]?.GetValue<string>() ?? "library";
+                    _playerName = msg["opponent"]?.GetValue<string>();
+                    PushState();
+                    break;
+
+                case "addNote":
+                    _store.AddNote(
+                        msg!["matchId"]!.GetValue<string>(),
+                        _recorder.RecordingElapsedSeconds,
+                        msg["text"]!.GetValue<string>(),
+                        msg["tags"]?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? []);
+                    break;
+
+                case "updateMatchMeta":
+                    _store.UpdateMatchMeta(
+                        msg!["matchId"]!.GetValue<string>(),
+                        msg["result"]?.GetValue<string>(),
+                        msg["gamesWon"]?.GetValue<int>() ?? 0,
+                        msg["gamesLost"]?.GetValue<int>() ?? 0,
+                        msg["stages"]?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? [],
+                        msg["myCharacter"]?.GetValue<string>(),
+                        msg["opponentCharacter"]?.GetValue<string>());
+                    break;
+
+                case "setFocusGoal":
+                    _store.SetFocusGoal(msg!["text"]?.GetValue<string>() ?? "");
+                    break;
+
+                case "setGamePlan":
+                    var opponent = msg!["opponent"]?.GetValue<string>();
+                    if (!string.IsNullOrWhiteSpace(opponent)) _store.SetGamePlan(opponent, msg["text"]?.GetValue<string>() ?? "");
+                    break;
+
+                case "stopRecording":
+                    _ = _recorder.HandleEventAsync("manual_stop", null, null, null);
+                    break;
+
+                case "openVideo":
+                    OpenVideo(msg!["matchId"]!.GetValue<string>());
+                    break;
+
+                case "deleteMatch":
+                    _store.DeleteMatch(msg!["matchId"]!.GetValue<string>());
+                    break;
+
+                case "openConfig":
+                    TrayAppContext.OpenFile(Config.FilePath);
+                    break;
+
+                case "openLog":
+                    TrayAppContext.OpenFile(Log.FilePath);
+                    break;
+
+                case "saveSettings":
+                    if (msg!["toggleDeleteOriginal"]?.GetValue<bool>() == true)
+                        _config.DeleteOriginalAfterRemux = !_config.DeleteOriginalAfterRemux;
+                    if (msg["filenameTemplate"]?.GetValue<string>() is { } ft) _config.FilenameTemplate = ft;
+                    if (msg["recordingsFolder"]?.GetValue<string>() is { } rf) _config.RecordingsFolder = string.IsNullOrWhiteSpace(rf) ? null : rf;
+                    if (msg["obsExePath"]?.GetValue<string>() is { } oe) _config.ObsExePath = oe;
+                    _config.Save();
+                    PushState();
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"MainWindow message error ({action}): {ex.Message}");
+        }
+    }
+
+    private void OpenVideo(string matchId)
+    {
+        var m = _store.Snapshot().Matches.FirstOrDefault(x => x.Id == matchId);
+        if (m?.VideoPath == null || !File.Exists(m.VideoPath))
+        {
+            MessageBox.Show("No video file for this match yet.", "PeakRecorder", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{m.VideoPath}\"") { UseShellExecute = true });
+    }
+}

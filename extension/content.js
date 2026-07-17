@@ -27,6 +27,7 @@
     myNameAuto: null,
     matchId: null, // match page we are currently on
     opponent: null,
+    foundSent: false, // told the app the opponent is known (pre-match briefing)
     startedSent: false, // told the app to start recording
     finishedSent: false,
   };
@@ -191,9 +192,12 @@
             matchId: state.matchId,
             opponent: state.opponent,
           });
+        } else if (state.foundSent && !state.startedSent) {
+          send("event", { type: "match_dismissed", matchId: state.matchId });
         }
         state.matchId = null;
         state.opponent = null;
+        state.foundSent = false;
         state.startedSent = false;
         state.finishedSent = false;
       }
@@ -231,9 +235,22 @@
       // mark it done so we never start recording for it.
       state.matchId = id;
       state.opponent = opponent;
+      state.foundSent = false;
       state.startedSent = false;
       state.finishedSent = finished;
       if (finished) log("match page is already finished, not recording");
+    }
+
+    // Tell the app the opponent is known (stage-striking phase, before the
+    // match is "ready") so it can show the pre-match briefing.
+    if (!state.foundSent && !state.startedSent && !state.finishedSent && !ready && iAmPlaying && opponent) {
+      state.foundSent = true;
+      send("event", {
+        type: "match_found",
+        matchId: id,
+        opponent,
+        players: players.map((p) => p.name),
+      });
     }
 
     // Start only when the match is set (characters + stage picked), and only

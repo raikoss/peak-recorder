@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#101426;font-family:Sora,system-ui,sans-serif;color:#e8ebf5;overflow:hidden}
+#app{display:flex;width:100vw;height:100vh;min-width:0;min-height:0}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:4px}
+a,.link{color:#45c4ff;cursor:pointer;text-decoration:none}
+.link:hover{text-decoration:underline}
+.muted{color:#6d7694}
+.row{display:flex;align-items:center}
+.col{display:flex;flex-direction:column}
+.btn{border:1px solid rgba(255,255,255,.16);border-radius:8px;padding:7px 12px;font:600 11.5px Sora,sans-serif;color:#a9b2cc;cursor:pointer;background:transparent}
+.btn:hover{background:rgba(255,255,255,.06)}
+.btn.primary{background:#45c4ff;color:#062033;border-color:transparent}
+.btn.danger{border-color:rgba(255,109,109,.4);color:#ff8f8f}
+input[type=text],textarea{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#e8ebf5;font:400 12px Sora,sans-serif;padding:8px 10px;outline:none}
+input[type=text]:focus,textarea:focus{border-color:rgba(69,196,255,.5)}
+textarea{resize:vertical;font-family:Sora,sans-serif}
+.chip{border-radius:6px;padding:2px 8px;font:600 10px Sora,sans-serif;display:inline-flex;align-items:center;gap:4px}
+.chip.habit{background:rgba(255,77,148,.14);color:#ff9dc4}
+.chip.adapt{background:rgba(61,220,132,.12);color:#7fe8ad}
+.chip.workon{background:rgba(255,209,102,.12);color:#ffd166}
+.chip.tech{background:rgba(139,108,255,.14);color:#c3b3ff}
+.chip.win{background:rgba(61,220,132,.14);color:#7fe8ad}
+.chip.loss{background:rgba(255,109,109,.14);color:#ff8f8f}
+.dot{width:7px;height:7px;border-radius:50%;flex:none}
+
+/* ---- sidebar ---- */
+.sidebar{width:312px;flex:none;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.07);background:#0c1020;min-height:0}
+.brand{padding:14px 14px 10px}
+.brand-row{display:flex;align-items:center;gap:8px}
+.brand-title{font:800 13px Sora,sans-serif;letter-spacing:.03em}
+.brand-title span{color:#ff4d94}
+.rec-indicator{margin-left:auto;display:flex;align-items:center;gap:5px;font:600 10px Sora,sans-serif;color:#ff9dc4}
+.focus-box{margin-top:10px;background:linear-gradient(120deg,rgba(255,77,148,.14),rgba(69,196,255,.1));border:1px solid rgba(255,77,148,.3);border-radius:10px;padding:9px 11px;cursor:pointer}
+.focus-label{font:600 9.5px Sora,sans-serif;color:#ff9dc4;letter-spacing:.1em}
+.focus-text{font:600 11.5px/1.45 Sora,sans-serif;color:#f0e6ee;margin-top:3px}
+.search{margin-top:10px;display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:7px 10px}
+.search input{background:transparent;border:none;flex:1;padding:0;font:400 11.5px Sora,sans-serif;color:#e8ebf5}
+.match-list{flex:1;overflow-y:auto;min-height:0}
+.match-row{padding:9px 14px;display:flex;flex-direction:column;gap:5px;border-left:2px solid transparent;cursor:pointer}
+.match-row:hover{background:rgba(255,255,255,.03)}
+.match-row.selected{background:rgba(255,77,148,.1);border-left-color:#ff4d94}
+.match-row.live{background:rgba(255,77,148,.1);border-left-color:#ff4d94}
+.match-top{display:flex;align-items:baseline;gap:6px}
+.match-opp{font:600 12.5px Sora,sans-serif;color:#c6cde0}
+.match-row.selected .match-opp,.match-row.live .match-opp{font-weight:700;color:#fff}
+.match-meta{font:400 10.5px Sora,sans-serif;color:#6d7694}
+.sidebar-foot{padding:9px 14px;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px;font:400 10.5px Sora,sans-serif;color:#6d7694}
+.sidebar-foot .link{margin-left:auto;color:#a9b2cc}
+.sidebar-foot .link + .link{margin-left:10px}
+
+/* ---- main ---- */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+.detail-hdr{padding:14px 20px 11px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;gap:9px}
+.detail-title-row{display:flex;align-items:center;gap:10px}
+.detail-title{font:700 17px Sora,sans-serif}
+.detail-chips{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.editable-chip{border:1px dashed rgba(255,255,255,.22);border-radius:6px;padding:3px 9px;font:400 10.5px Sora,sans-serif;color:#6d7694;cursor:pointer}
+.body{flex:1;display:flex;min-height:0}
+.notes-col{flex:1.35;display:flex;flex-direction:column;padding:12px 20px 14px;gap:9px;min-width:0;overflow-y:auto}
+.note{display:flex;gap:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:9px 12px}
+.note-ts{font:700 11px ui-monospace,Consolas,monospace;color:#45c4ff;background:rgba(69,196,255,.12);border-radius:5px;padding:2px 7px;height:fit-content;flex:none;cursor:pointer}
+.note-body{font:400 12px/1.5 Sora,sans-serif;color:#d4daea;flex:1}
+.composer{margin-top:auto;display:flex;flex-direction:column;gap:7px}
+.composer-row{display:flex;gap:8px;align-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(69,196,255,.35);border-radius:10px;padding:9px 12px}
+.composer-row input{flex:1;background:transparent;border:none}
+.quicktags{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.quicktags .chip{cursor:pointer;border:1px solid transparent}
+.quicktags .chip.active{border-color:currentColor}
+.side-col{width:280px;flex:none;border-left:1px solid rgba(255,255,255,.07);padding:12px 16px 14px;display:flex;flex-direction:column;gap:11px;background:rgba(4,10,24,.35);overflow-y:auto}
+.slabel{font:700 11px Sora,sans-serif;letter-spacing:.12em;color:#6d7694}
+.stat-box{flex:1;background:rgba(255,255,255,.05);border-radius:9px;padding:8px 10px;text-align:center}
+.stat-num{font:700 15px Sora,sans-serif}
+.stat-lbl{font:400 9.5px Sora,sans-serif;color:#6d7694}
+.habit-line{font:400 11px/1.5 Sora,sans-serif;color:#c6cde0;border-left:2px solid rgba(255,77,148,.5);padding-left:9px}
+.plan-box{background:rgba(61,220,132,.08);border:1px solid rgba(61,220,132,.25);border-radius:9px;padding:8px 10px}
+.plan-label{font:600 9.5px Sora,sans-serif;color:#7fe8ad;letter-spacing:.08em}
+.plan-text{font:400 10.5px/1.5 Sora,sans-serif;color:#c6cde0;margin-top:3px;white-space:pre-wrap}
+.empty{font:400 11.5px Sora,sans-serif;color:#6d7694;padding:20px;text-align:center}
+
+/* ---- player page ---- */
+.player-hdr{padding:12px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.07)}
+.player-who{padding:18px 20px 14px;display:flex;align-items:center;gap:16px;border-bottom:1px solid rgba(255,255,255,.07)}
+.avatar{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#ff4d94,#8b6cff);display:flex;align-items:center;justify-content:center;font:800 20px Sora,sans-serif;color:#fff;flex:none}
+.player-body{flex:1;display:flex;min-height:0;overflow:hidden}
+.player-col{flex:1;padding:14px 20px;display:flex;flex-direction:column;gap:10px;min-width:0;overflow-y:auto}
+.player-col.left{border-right:1px solid rgba(255,255,255,.07)}
+.set-row{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:9px 12px;display:flex;flex-direction:column;gap:4px;cursor:pointer}
+.set-row:hover{background:rgba(255,255,255,.07)}
+.sbar-row{display:flex;align-items:center;gap:8px;font:400 10.5px Sora,sans-serif;color:#a9b2cc}
+.sbar-name{width:90px;flex:none}
+.sbar{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
+.sbar-fill{height:100%}
+
+/* ---- settings ---- */
+.settings-body{flex:1;display:flex;min-height:0}
+.settings-nav{width:170px;flex:none;padding:16px 12px;display:flex;flex-direction:column;gap:2px;border-right:1px solid rgba(255,255,255,.07)}
+.settings-nav div{padding:7px 10px;border-radius:8px;font:400 12px Sora,sans-serif;color:#8a93ad}
+.settings-nav div.active{background:rgba(69,196,255,.12);font-weight:600;color:#7dd7ff}
+.settings-main{flex:1;padding:18px 24px;display:flex;flex-direction:column;gap:16px;overflow-y:auto}
+.field{display:flex;flex-direction:column;gap:6px}
+.field-label{font:600 12.5px Sora,sans-serif}
+.field-hint{font:400 10.5px Sora,sans-serif;color:#6d7694}
+.field input[type=text]{width:100%}
+.toggle{display:flex;align-items:center;gap:12px}
+.toggle-track{width:34px;height:19px;border-radius:10px;position:relative;flex:none;cursor:pointer}
+.toggle-thumb{position:absolute;top:2px;width:15px;height:15px;border-radius:50%;background:#fff}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const S = { data: null };
+
+function post(msg) {
+  if (window.chrome && window.chrome.webview) window.chrome.webview.postMessage(JSON.stringify(msg));
+}
+window.onerror = function (message, source, lineno, colno, error) {
+  post({ action: 'jsError', message: String(message), lineno, colno, stack: error && error.stack });
+};
+// Called as window.__applyState({...}) with a JS object literal spliced
+// directly into the script text (see MainWindow.PushState) — not a JSON
+// string, so no JSON.parse here.
+window.__applyState = function (data) {
+  try {
+    S.data = data;
+    render();
+  } catch (err) {
+    post({ action: 'jsError', message: 'applyState: ' + err.message, stack: err.stack });
+  }
+};
+
+function esc(s) {
+  return (s ?? '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmtTime(sec) {
+  sec = Math.max(0, sec | 0);
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const today = new Date();
+  const sameDay = d.toDateString() === today.toDateString();
+  const y = new Date(today); y.setDate(y.getDate() - 1);
+  const yest = d.toDateString() === y.toDateString();
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (sameDay) return `Today ${time}`;
+  if (yest) return `Yesterday ${time}`;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + time;
+}
+function initial(name) { return (name || '?').trim()[0]?.toUpperCase() || '?'; }
+function resultLabel(m) {
+  if (!m.result) return null;
+  return { text: `${m.result} ${m.gamesWon}–${m.gamesLost}`, cls: m.result === 'W' ? 'win' : 'loss' };
+}
+
+// ---- preserve focus/selection of the active input across full re-renders ----
+function withPreservedFocus(fn) {
+  const el = document.activeElement;
+  let saved = null;
+  if (el && el.id && document.getElementById('app').contains(el)) {
+    saved = { id: el.id, value: el.value, start: el.selectionStart, end: el.selectionEnd };
+  }
+  fn();
+  if (saved) {
+    const again = document.getElementById(saved.id);
+    if (again) {
+      again.focus();
+      if (again.value === saved.value && again.setSelectionRange) {
+        try { again.setSelectionRange(saved.start, saved.end); } catch { }
+      }
+    }
+  }
+}
+
+function render() {
+  withPreservedFocus(() => {
+    const s = S.data;
+    const app = document.getElementById('app');
+    if (!s) { app.innerHTML = ''; return; }
+    if (s.page === 'settings') app.innerHTML = renderSettings(s);
+    else if (s.page === 'player') app.innerHTML = renderPlayer(s);
+    else app.innerHTML = renderLibrary(s);
+    wireCommon();
+  });
+}
+
+function wireCommon() {
+  document.querySelectorAll('[data-click]').forEach(el => {
+    el.addEventListener('click', () => {
+      const action = el.dataset.click;
+      const arg = el.dataset.arg;
+      handlers[action] && handlers[action](el, arg);
+    });
+  });
+  document.querySelectorAll('[data-enter]').forEach(el => {
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handlers[el.dataset.enter] && handlers[el.dataset.enter](el);
+      }
+    });
+  });
+  document.querySelectorAll('[data-blur]').forEach(el => {
+    el.addEventListener('blur', () => handlers[el.dataset.blur] && handlers[el.dataset.blur](el));
+  });
+  const filterEl = document.getElementById('filterInput');
+  if (filterEl) filterEl.addEventListener('input', () => { ui.filter = filterEl.value; render(); });
+}
+
+const ui = { filter: '', selectedMatchId: null, activeTags: [] };
+
+// ================= LIBRARY (turn 2a) =================
+
+function pickSelectedMatch(s) {
+  if (ui.selectedMatchId) {
+    const m = s.matches.find(x => x.id === ui.selectedMatchId);
+    if (m) return m;
+  }
+  return s.matches[0] || null;
+}
+
+function renderLibrary(s) {
+  const filtered = s.matches.filter(m => {
+    if (!ui.filter) return true;
+    const f = ui.filter.toLowerCase();
+    return m.opponent.toLowerCase().includes(f) || m.notes.some(n => n.text.toLowerCase().includes(f));
+  });
+  const selected = pickSelectedMatch(s);
+
+  return `
+  <div class="sidebar">
+    <div class="brand">
+      <div class="brand-row">
+        <span class="brand-title">PEAK<span>RECORDER</span></span>
+        ${s.recording.isRecording ? `<span class="rec-indicator"><span class="dot" style="background:#ff4d94;box-shadow:0 0 6px #ff4d94"></span>REC</span>` : ''}
+      </div>
+      <div class="focus-box" data-click="editFocus">
+        <div class="focus-label">THIS WEEK'S FOCUS</div>
+        <div class="focus-text">${s.focusGoal ? esc(s.focusGoal) : '<span class="muted">Click to set a practice focus…</span>'}</div>
+      </div>
+      <div class="search"><input id="filterInput" type="text" placeholder="Filter opponent, note…" value="${esc(ui.filter)}"></div>
+    </div>
+    <div class="match-list">
+      ${filtered.length === 0 ? '<div class="empty">No matches recorded yet.</div>' : filtered.map(m => matchRow(m, s)).join('')}
+    </div>
+    <div class="sidebar-foot">
+      <span>${s.matches.length} recordings</span>
+      <span class="link" data-click="openSettings">Settings</span>
+    </div>
+  </div>
+  <div class="main">${selected ? matchDetail(selected, s) : `<div class="empty">Select a match to see notes and scouting.</div>`}</div>
+  `;
+}
+
+function matchRow(m, s) {
+  const live = s.recording.isRecording && s.recording.currentMatchRecordId === m.id;
+  const sel = ui.selectedMatchId ? ui.selectedMatchId === m.id : (!ui.selectedMatchId && m === pickSelectedMatch(s));
+  const r = resultLabel(m);
+  return `
+  <div class="match-row ${live ? 'live' : (sel ? 'selected' : '')}" data-click="selectMatch" data-arg="${m.id}">
+    <div class="match-top">
+      <span class="match-opp">${esc(m.opponent)}</span>
+      ${live ? '<span style="margin-left:auto;font:700 10.5px Sora,sans-serif;color:#ff9dc4">LIVE</span>' :
+        (r ? `<span class="chip ${r.cls}" style="margin-left:auto">${r.text}</span>` : '')}
+    </div>
+    <div class="match-meta">${fmtDate(m.startedAt)}${m.notes.length ? ` · ${m.notes.length} note${m.notes.length === 1 ? '' : 's'}` : ''}</div>
+  </div>`;
+}
+
+function matchDetail(m, s) {
+  const live = s.recording.isRecording && s.recording.currentMatchRecordId === m.id;
+  const r = resultLabel(m);
+  const stages = (m.stages || []).map(st => `<span class="chip" style="background:rgba(255,255,255,.07);color:#a9b2cc">${esc(st)}</span>`).join('');
+  return `
+  <div class="detail-hdr">
+    <div class="detail-title-row">
+      <div class="detail-title">vs ${esc(m.opponent)}</div>
+      ${live ? '<span class="row" style="gap:6px;background:rgba(255,77,148,.14);color:#ff9dc4;border-radius:6px;padding:3px 9px;font:700 11px Sora,sans-serif"><span class="dot" style="background:#ff4d94"></span>RECORDING</span>'
+             : (r ? `<span class="chip ${r.cls}" style="font-size:11px">${r.text}</span>` : '')}
+      <div style="margin-left:auto;display:flex;gap:8px">
+        ${live ? '<div class="btn danger" data-click="stopRecording">■ Stop</div>' : ''}
+        ${m.videoPath ? '<div class="btn" data-click="openVideo" data-arg="' + m.id + '">Show file</div>' : ''}
+        <div class="btn danger" data-click="deleteMatch" data-arg="${m.id}">Delete</div>
+      </div>
+    </div>
+    <div class="detail-chips">
+      ${stages}
+      <span class="editable-chip" data-click="editMeta" data-arg="${m.id}">edit result / stages / characters</span>
+      ${m.myCharacter ? `<span class="chip" style="background:rgba(255,77,148,.14);color:#ff9dc4">${esc(m.myCharacter)}</span>` : ''}
+      ${m.opponentCharacter ? `<span class="chip" style="background:rgba(139,108,255,.16);color:#c3b3ff">${esc(m.opponentCharacter)}</span>` : ''}
+    </div>
+    <div id="metaEditor-${m.id}"></div>
+  </div>
+  <div class="body">
+    <div class="notes-col">
+      <div class="row" style="gap:8px"><span class="slabel">NOTES</span><span class="muted" style="font-size:10.5px">times are into the recording</span></div>
+      ${m.notes.length === 0 ? '<div class="empty">No notes yet.</div>' : m.notes.map(n => noteRow(n)).join('')}
+      ${live ? composer(m) : ''}
+    </div>
+    <div class="side-col">${scoutingPanel(m.opponent, s)}</div>
+  </div>`;
+}
+
+function noteRow(n) {
+  const tags = (n.tags || []).map(tagChip).join(' ');
+  return `<div class="note"><span class="note-ts" title="click to copy">${fmtTime(n.timestampSeconds)}</span><div class="note-body">${esc(n.text)} ${tags}</div></div>`;
+}
+function tagChip(t) {
+  const cls = { habit: 'habit', adapt: 'adapt', 'work-on': 'workon', tech: 'tech' }[t] || 'habit';
+  return `<span class="chip ${cls}">#${t}</span>`;
+}
+
+function composer(m) {
+  const tags = ['habit', 'adapt', 'work-on', 'tech'];
+  return `
+  <div class="composer">
+    <div class="composer-row">
+      <span class="note-ts">now</span>
+      <input id="noteInput" type="text" placeholder="What just happened…" data-enter="addNote">
+      <div class="btn primary" data-click="addNote">Add</div>
+    </div>
+    <div class="quicktags">
+      <span class="muted" style="font-size:10px">quick-tag:</span>
+      ${tags.map(t => `<span class="chip ${{ habit: 'habit', adapt: 'adapt', 'work-on': 'workon', tech: 'tech' }[t]} ${ui.activeTags.includes(t) ? 'active' : ''}" data-click="toggleTag" data-arg="${t}">#${t}</span>`).join('')}
+    </div>
+  </div>`;
+}
+
+function scoutingPanel(opponent, s) {
+  const past = s.matches.filter(m => m.opponent.toLowerCase() === opponent.toLowerCase() && m.result);
+  const wins = past.filter(m => m.result === 'W').length;
+  const losses = past.filter(m => m.result === 'L').length;
+  const habits = [];
+  s.matches.filter(m => m.opponent.toLowerCase() === opponent.toLowerCase())
+    .forEach(m => m.notes.forEach(n => { if ((n.tags || []).includes('habit')) habits.push(n); }));
+  const plan = s.gamePlans[opponent.toLowerCase()] || '';
+  return `
+  <div class="row" style="gap:6px"><span class="slabel">SCOUTING</span><span class="link" style="margin-left:auto;font-size:10px" data-click="openPlayer" data-arg="${esc(opponent)}">full page →</span></div>
+  <div class="row" style="gap:8px">
+    <div class="stat-box"><div class="stat-num" style="color:${losses > wins ? '#ff8f8f' : '#7fe8ad'}">${wins}–${losses}</div><div class="stat-lbl">sets vs you</div></div>
+  </div>
+  <div class="col" style="gap:8px">
+    <div class="slabel" style="color:#ff9dc4;font-size:10px">HABITS</div>
+    ${habits.length === 0 ? '<div class="muted" style="font-size:11px">Tag a note #habit to start building this.</div>' :
+      habits.slice(0, 5).map(h => `<div class="habit-line">${esc(h.text)}</div>`).join('')}
+  </div>
+  <div class="plan-box">
+    <div class="plan-label">GAME PLAN</div>
+    <div class="plan-text">${plan ? esc(plan) : '<span class="muted">No game plan yet — add one from the player page.</span>'}</div>
+  </div>
+  <div class="col" style="gap:6px;margin-top:auto">
+    <div class="slabel" style="font-size:10px">PAST SETS</div>
+    ${past.length === 0 ? '<div class="muted" style="font-size:10.5px">No finished sets recorded yet.</div>' :
+      past.slice(0, 4).map(m => `<div class="row" style="justify-content:space-between;font:400 10.5px Sora,sans-serif;color:#a9b2cc"><span>${fmtDate(m.startedAt)}</span><span class="${m.result === 'W' ? '' : ''}" style="color:${m.result === 'W' ? '#3ddc84' : '#ff6d6d'};font-weight:700">${m.result} ${m.gamesWon}–${m.gamesLost}</span></div>`).join('')}
+  </div>`;
+}
+
+// ================= PLAYER PAGE (turn 2b) =================
+
+function renderPlayer(s) {
+  const opponent = s.playerName;
+  const matches = s.matches.filter(m => m.opponent.toLowerCase() === (opponent || '').toLowerCase());
+  const finished = matches.filter(m => m.result);
+  const wins = finished.filter(m => m.result === 'W').length;
+  const losses = finished.filter(m => m.result === 'L').length;
+  const gamesWon = finished.reduce((a, m) => a + (m.gamesWon || 0), 0);
+  const gamesLost = finished.reduce((a, m) => a + (m.gamesLost || 0), 0);
+  const notesCount = matches.reduce((a, m) => a + m.notes.length, 0);
+  const habits = [];
+  matches.forEach(m => m.notes.forEach(n => { if ((n.tags || []).includes('habit')) habits.push(n); }));
+  const plan = s.gamePlans[(opponent || '').toLowerCase()] || '';
+
+  const stageMap = {};
+  matches.forEach(m => (m.stages || []).forEach(st => {
+    stageMap[st] = stageMap[st] || { w: 0, l: 0 };
+    if (m.result === 'W') stageMap[st].w++; else if (m.result === 'L') stageMap[st].l++;
+  }));
+
+  return `
+  <div class="main" style="width:100%">
+    <div class="player-hdr">
+      <span class="link" data-click="openLibrary">← Library</span><span class="muted">/</span><span style="font:600 12px Sora,sans-serif;color:#a9b2cc">Players</span>
+      <span style="margin-left:auto;font:600 13px Sora,sans-serif">${esc(opponent)}</span>
+    </div>
+    <div class="player-who">
+      <div class="avatar">${initial(opponent)}</div>
+      <div class="col" style="gap:3px">
+        <div style="font:800 19px Sora,sans-serif">${esc(opponent)}</div>
+        <div class="muted" style="font-size:11px">${matches.length} recorded match${matches.length === 1 ? '' : 'es'}</div>
+      </div>
+      <div class="row" style="margin-left:auto;gap:10px">
+        <div class="stat-box"><div class="stat-num" style="color:${losses > wins ? '#ff8f8f' : '#7fe8ad'}">${wins}–${losses}</div><div class="stat-lbl">sets</div></div>
+        <div class="stat-box"><div class="stat-num">${gamesWon}–${gamesLost}</div><div class="stat-lbl">games</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:#45c4ff">${notesCount}</div><div class="stat-lbl">notes</div></div>
+      </div>
+    </div>
+    <div class="player-body">
+      <div class="player-col left">
+        <div class="row" style="gap:8px"><span class="slabel" style="color:#ff9dc4">HABITS</span><span class="muted" style="font-size:10px">pinned from #habit notes</span></div>
+        ${habits.length === 0 ? '<div class="empty">No habits tagged yet.</div>' :
+          habits.map(h => `<div class="habit-line" style="padding:10px 12px;background:rgba(255,77,148,.07);border:1px solid rgba(255,77,148,.22);border-radius:10px;border-left:none">${esc(h.text)}</div>`).join('')}
+        <div class="row" style="gap:8px;margin-top:6px"><span class="slabel" style="color:#7fe8ad">GAME PLAN</span></div>
+        <textarea id="gamePlanInput" rows="5" placeholder="Free-form game plan for ${esc(opponent)}…" data-blur="saveGamePlan">${esc(plan)}</textarea>
+      </div>
+      <div class="player-col">
+        <div class="slabel">SET HISTORY</div>
+        ${matches.length === 0 ? '<div class="empty">Nothing recorded yet.</div>' : matches.map(m => `
+          <div class="set-row" data-click="openVideo" data-arg="${m.id}">
+            <div class="row" style="gap:8px">
+              <span style="font:600 11.5px Sora,sans-serif">${fmtDate(m.startedAt)}</span>
+              <span class="muted" style="font-size:10.5px">${(m.stages || []).join(', ')}</span>
+              ${m.result ? `<span class="chip ${m.result === 'W' ? 'win' : 'loss'}" style="margin-left:auto">${m.result} ${m.gamesWon}–${m.gamesLost}</span>` : '<span class="muted" style="margin-left:auto;font-size:10.5px">not scored</span>'}
+            </div>
+            <div class="muted" style="font-size:10px">${m.notes.length} note${m.notes.length === 1 ? '' : 's'}${m.videoPath ? ' · has video' : ''}</div>
+          </div>`).join('')}
+        ${Object.keys(stageMap).length ? `
+          <div class="col" style="gap:6px;margin-top:auto;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px 12px">
+            <div class="slabel" style="font-size:10px">STAGES VS ${esc(opponent.toUpperCase())}</div>
+            ${Object.entries(stageMap).map(([st, v]) => {
+              const total = v.w + v.l, pct = total ? Math.round(100 * v.w / total) : 0;
+              return `<div class="sbar-row"><span class="sbar-name">${esc(st)}</span><div class="sbar"><div class="sbar-fill" style="width:${pct}%;background:${pct >= 50 ? '#3ddc84' : '#ff6d6d'}"></div></div><span>${v.w}–${v.l}</span></div>`;
+            }).join('')}
+          </div>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ================= SETTINGS (turn 2c) =================
+
+function renderSettings(s) {
+  const c = s.config;
+  return `
+  <div class="main" style="width:100%">
+    <div class="player-hdr">
+      <span class="link" data-click="openLibrary">← Library</span><span class="muted">/</span><span style="font:600 12px Sora,sans-serif;color:#a9b2cc">Settings</span>
+    </div>
+    <div class="settings-body">
+      <div class="settings-nav">
+        <div class="active">Recording</div>
+        <div title="Configured via the browser extension popup">Extension</div>
+      </div>
+      <div class="settings-main">
+        <div class="field">
+          <div class="field-label">Filename template</div>
+          <input id="cfgFilenameTemplate" type="text" value="${esc(c.filenameTemplate)}" data-blur="saveSettings">
+          <div class="field-hint">insert: {date} {time} {opponent} {matchId}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Recordings folder</div>
+          <div class="row" style="gap:8px">
+            <input id="cfgRecordingsFolder" type="text" style="flex:1" value="${esc(c.recordingsFolder || '')}" placeholder="(leave blank to use OBS's own output folder)" data-blur="saveSettings">
+          </div>
+          <div class="field-hint">Finished recordings are moved here after OBS stops.</div>
+        </div>
+        <div class="field">
+          <div class="field-label">OBS executable path</div>
+          <input id="cfgObsExePath" type="text" value="${esc(c.obsExePath)}" data-blur="saveSettings">
+        </div>
+        <div class="toggle" data-click="toggleDeleteOriginal">
+          <div class="toggle-track" style="background:${c.deleteOriginalAfterRemux ? '#45c4ff' : 'rgba(255,255,255,.14)'}">
+            <div class="toggle-thumb" style="${c.deleteOriginalAfterRemux ? 'right:2px' : 'left:2px'}"></div>
+          </div>
+          <div class="col"><span style="font:600 12px Sora,sans-serif">Delete original after remux</span><span class="field-hint">Remove the .mkv once the renamed .mp4 looks complete</span></div>
+        </div>
+        <div class="row" style="margin-top:auto;gap:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px 12px">
+          <span class="muted" style="font-size:11px">%APPDATA%\\PeakRecorder\\config.json</span>
+          <span class="link" style="margin-left:auto;font-size:11px" data-click="openConfig">Open raw</span>
+          <span class="link" style="font-size:11px" data-click="openLog">Open log</span>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ================= handlers =================
+
+const handlers = {
+  selectMatch(el, id) { ui.selectedMatchId = id; render(); },
+  openPlayer(el, opponent) { post({ action: 'navigate', page: 'player', opponent }); },
+  openLibrary() { post({ action: 'navigate', page: 'library' }); },
+  openSettings() { post({ action: 'navigate', page: 'settings' }); },
+  stopRecording() { post({ action: 'stopRecording' }); },
+  openVideo(el, id) { post({ action: 'openVideo', matchId: id }); },
+  deleteMatch(el, id) {
+    if (ui.selectedMatchId === id) ui.selectedMatchId = null;
+    post({ action: 'deleteMatch', matchId: id });
+  },
+  openConfig() { post({ action: 'openConfig' }); },
+  openLog() { post({ action: 'openLog' }); },
+  toggleTag(el, tag) {
+    const i = ui.activeTags.indexOf(tag);
+    if (i >= 0) ui.activeTags.splice(i, 1); else ui.activeTags.push(tag);
+    render();
+  },
+  addNote() {
+    const input = document.getElementById('noteInput');
+    if (!input || !input.value.trim()) return;
+    const m = pickSelectedMatch(S.data);
+    post({ action: 'addNote', matchId: m.id, text: input.value, tags: [...ui.activeTags] });
+    ui.activeTags = [];
+  },
+  editFocus() {
+    const val = prompt('This week\'s focus:', S.data.focusGoal || '');
+    if (val !== null) post({ action: 'setFocusGoal', text: val });
+  },
+  editMeta(el, id) {
+    const m = S.data.matches.find(x => x.id === id);
+    if (!m) return;
+    const result = prompt('Result (W / L / blank):', m.result || '');
+    if (result === null) return;
+    const gw = parseInt(prompt('Games won:', m.gamesWon || 0)) || 0;
+    const gl = parseInt(prompt('Games lost:', m.gamesLost || 0)) || 0;
+    const stages = prompt('Stages (comma separated):', (m.stages || []).join(', ')) || '';
+    const myChar = prompt('Your character:', m.myCharacter || '') || '';
+    const oppChar = prompt('Opponent character:', m.opponentCharacter || '') || '';
+    post({
+      action: 'updateMatchMeta', matchId: id,
+      result: result.trim().toUpperCase() || null, gamesWon: gw, gamesLost: gl,
+      stages: stages.split(',').map(x => x.trim()).filter(Boolean),
+      myCharacter: myChar.trim() || null, opponentCharacter: oppChar.trim() || null,
+    });
+  },
+  saveGamePlan(el) {
+    post({ action: 'setGamePlan', opponent: S.data.playerName, text: el.value });
+  },
+  saveSettings() {
+    post({
+      action: 'saveSettings',
+      filenameTemplate: document.getElementById('cfgFilenameTemplate').value,
+      recordingsFolder: document.getElementById('cfgRecordingsFolder').value,
+      obsExePath: document.getElementById('cfgObsExePath').value,
+    });
+  },
+  toggleDeleteOriginal() {
+    post({ action: 'saveSettings', toggleDeleteOriginal: true });
+  },
+};
+</script>
+</body>
+</html>

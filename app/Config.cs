@@ -33,6 +33,11 @@ public class Config
     /// </summary>
     public bool DeleteOriginalAfterRemux { get; set; } = true;
 
+    /// <summary>How to show the pre-match briefing when a match is found.
+    /// "card" = small always-on-top card, "full" = full window takeover,
+    /// "off" = disabled.</summary>
+    public string BriefingStyle { get; set; } = "card";
+
     public static string Dir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PeakRecorder");
 
