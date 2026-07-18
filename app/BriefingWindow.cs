@@ -11,7 +11,7 @@ internal sealed class BriefingWindow : Form
 {
     private readonly WebView2 _web = new() { Dock = DockStyle.Fill };
 
-    public BriefingWindow(string opponent)
+    public BriefingWindow(string opponent, AppData data)
     {
         Text = "PeakRecorder — Match Found";
         ClientSize = new Size(900, 640);
@@ -21,10 +21,10 @@ internal sealed class BriefingWindow : Form
         BackColor = Color.FromArgb(0x10, 0x14, 0x26);
         Controls.Add(_web);
 
-        _ = InitAsync(opponent);
+        _ = InitAsync(opponent, data);
     }
 
-    private async Task InitAsync(string opponent)
+    private async Task InitAsync(string opponent, AppData data)
     {
         try
         {
@@ -34,7 +34,7 @@ internal sealed class BriefingWindow : Form
             {
                 if (e.TryGetWebMessageAsString() == "close") Close();
             };
-            _web.CoreWebView2.NavigateToString(BriefingHtml.Full(opponent));
+            _web.CoreWebView2.NavigateToString(BriefingHtml.Full(opponent, data));
         }
         catch (Exception ex)
         {

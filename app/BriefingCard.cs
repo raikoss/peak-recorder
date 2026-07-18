@@ -12,7 +12,7 @@ internal sealed class BriefingCard : Form
 {
     private readonly WebView2 _web = new() { Dock = DockStyle.Fill };
 
-    public BriefingCard(string opponent)
+    public BriefingCard(string opponent, AppData data)
     {
         FormBorderStyle = FormBorderStyle.None;
         ClientSize = new Size(380, 560);
@@ -25,10 +25,10 @@ internal sealed class BriefingCard : Form
         var wa = Screen.PrimaryScreen!.WorkingArea;
         Location = new Point(wa.Right - Width - 24, wa.Top + 24);
 
-        _ = InitAsync(opponent);
+        _ = InitAsync(opponent, data);
     }
 
-    private async Task InitAsync(string opponent)
+    private async Task InitAsync(string opponent, AppData data)
     {
         try
         {
@@ -42,7 +42,7 @@ internal sealed class BriefingCard : Form
                     case "drag": StartDrag(); break;
                 }
             };
-            _web.CoreWebView2.NavigateToString(BriefingHtml.Card(opponent));
+            _web.CoreWebView2.NavigateToString(BriefingHtml.Card(opponent, data));
         }
         catch (Exception ex)
         {
@@ -86,6 +86,11 @@ internal static class BriefingRuntime
 
     public static Task<CoreWebView2Environment> GetEnvironmentAsync()
     {
-        return _env ??= CoreWebView2Environment.CreateAsync(userDataFolder: UserDataFolder);
+        // Never cache a failed creation attempt — a single early failure
+        // (e.g. a call from the wrong thread) would otherwise leave every
+        // later window permanently blank until the app restarts.
+        if (_env == null || _env.IsFaulted || _env.IsCanceled)
+            _env = CoreWebView2Environment.CreateAsync(userDataFolder: UserDataFolder);
+        return _env;
     }
 }

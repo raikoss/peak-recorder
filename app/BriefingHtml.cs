@@ -3,10 +3,10 @@ using System.Text.Encodings.Web;
 namespace PeakRecorder;
 
 /// <summary>
-/// Renders the pre-match briefing shown while stage-striking (design turn 3).
-/// Habits, game plan, and stage/set history are placeholder content — this
-/// app doesn't track per-player scouting data yet, so every briefing shows
-/// the same illustrative "coach notes" regardless of opponent.
+/// Renders the pre-match briefing shown while stage-striking (design turn 3),
+/// filled with the opponent's recorded history from the Store: #habit notes,
+/// the saved game plan, set results and per-stage record. Sections fall back
+/// to explanatory placeholder text until there is data for them.
 /// </summary>
 internal static class BriefingHtml
 {
@@ -32,10 +32,95 @@ internal static class BriefingHtml
         "if(e.target.closest('[data-action]'))return;" +
         "if(window.chrome&&window.chrome.webview)window.chrome.webview.postMessage('drag');});</script>";
 
-    public static string Full(string opponent)
+    // ---- scouting data ---------------------------------------------------------
+
+    private sealed record Scouting(
+        List<MatchRecord> Matches,   // newest first (Snapshot order)
+        List<MatchRecord> Finished,  // subset with a W/L result
+        int Wins, int Losses,
+        List<string> Habits,         // #habit note texts, newest match first
+        string? GamePlan,
+        string FocusGoal);
+
+    private static Scouting Scout(AppData data, string opponent)
     {
+        var key = opponent.Trim().ToLowerInvariant();
+        var matches = data.Matches.Where(m => m.Opponent.Trim().ToLowerInvariant() == key).ToList();
+        var finished = matches.Where(m => m.Result != null).ToList();
+        var habits = matches.SelectMany(m => m.Notes)
+            .Where(n => n.Tags.Contains("habit")).Select(n => n.Text).ToList();
+        data.GamePlans.TryGetValue(key, out var plan);
+        return new Scouting(matches, finished,
+            finished.Count(m => m.Result == "W"), finished.Count(m => m.Result == "L"),
+            habits, string.IsNullOrWhiteSpace(plan) ? null : plan, data.FocusGoal);
+    }
+
+    private static string HistoryLine(Scouting sc) =>
+        sc.Matches.Count == 0
+            ? "No recorded history yet"
+            : $"{sc.Matches.Count} recorded match{(sc.Matches.Count == 1 ? "" : "es")} &middot; {sc.Wins}&ndash;{sc.Losses} sets vs you";
+
+    private static string SetResultSpan(MatchRecord m) =>
+        $"<span style=\"color:{(m.Result == "W" ? "#3ddc84" : "#ff6d6d")};font-weight:700\">{m.Result} {m.GamesWon}&ndash;{m.GamesLost}</span>";
+
+    private static string SetDate(MatchRecord m) => Esc(m.StartedAt.ToString("MMM d HH:mm"));
+
+    private static Dictionary<string, (int W, int L)> StageStats(Scouting sc)
+    {
+        var stats = new Dictionary<string, (int W, int L)>();
+        foreach (var m in sc.Finished)
+            foreach (var st in m.Stages)
+            {
+                var s = stats.GetValueOrDefault(st);
+                stats[st] = m.Result == "W" ? (s.W + 1, s.L) : (s.W, s.L + 1);
+            }
+        return stats;
+    }
+
+    // ---- pages -----------------------------------------------------------------
+
+    public static string Full(string opponent, AppData data)
+    {
+        var sc = Scout(data, opponent);
         var name = Esc(opponent);
         var letter = InitialLetter(opponent);
+
+        var habits = sc.Habits.Count == 0
+            ? """
+              <div class="habit"><span class="hnum">1</span><div class="htext">Watch their ledge options &mdash; note habits here once you start tagging notes as #habit.</div></div>
+              <div class="habit"><span class="hnum">2</span><div class="htext">Recovery tendencies show up here after a few recorded sets against this opponent.</div></div>
+              """
+            : string.Join("", sc.Habits.Take(3).Select((h, i) =>
+                $"""<div class="habit"><span class="hnum">{i + 1}</span><div class="htext">{Esc(h)}</div></div>"""));
+
+        var plan = sc.GamePlan != null
+            ? Esc(sc.GamePlan)
+            : "Add a game plan from the player page and it'll show up here automatically next time you play this opponent.";
+
+        var focus = string.IsNullOrWhiteSpace(sc.FocusGoal)
+            ? "Set a practice focus and it'll follow you into every match."
+            : Esc(sc.FocusGoal);
+
+        var stageStats = StageStats(sc);
+        var stages = stageStats.Count == 0
+            ? """
+              <div class="srow"><span class="sname">Battlefield</span><div class="sbar"><div class="sfill" style="width:0%;background:#6d7694"></div></div><span class="sscore">&mdash;</span></div>
+              <div class="srow"><span class="sname">Smashville</span><div class="sbar"><div class="sfill" style="width:0%;background:#6d7694"></div></div><span class="sscore">&mdash;</span></div>
+              <div class="srow"><span class="sname">PS2</span><div class="sbar"><div class="sfill" style="width:0%;background:#6d7694"></div></div><span class="sscore">&mdash;</span></div>
+              <div class="chips"><span class="chip ban">no data yet</span></div>
+              """
+            : string.Join("", stageStats.Select(kv =>
+              {
+                  var (w, l) = kv.Value;
+                  var pct = w + l == 0 ? 0 : 100 * w / (w + l);
+                  return $"""<div class="srow"><span class="sname">{Esc(kv.Key)}</span><div class="sbar"><div class="sfill" style="width:{pct}%;background:{(pct >= 50 ? "#3ddc84" : "#ff6d6d")}"></div></div><span class="sscore">{w}&ndash;{l}</span></div>""";
+              }));
+
+        var sets = sc.Finished.Count == 0
+            ? $"""<div class="setrow">No recorded sets against {name} yet.</div>"""
+            : string.Join("", sc.Finished.Take(5).Select(m =>
+                $"""<div class="setrow"><span>{SetDate(m)}</span><span style="margin-left:auto">{SetResultSpan(m)}</span></div>"""));
+
         return $$"""
 <!DOCTYPE html><html><head><meta charset="utf-8">{{FontLink}}
 <style>*{box-sizing:border-box}body{margin:0;background:#101426;font-family:Sora,system-ui,sans-serif;color:#e8ebf5;overflow:hidden}
@@ -82,25 +167,21 @@ internal static class BriefingHtml
 </style></head>
 <body><div class="wrap"><div class="glow"></div>
 <div class="hdr"><span class="tag"><span class="dot"></span>MATCH FOUND &middot; STAGE STRIKING</span><span class="sub">recording starts when the stage locks in</span><span class="close" data-action="close">&#10005; close</span></div>
-<div class="who"><div class="avatar">{{letter}}</div><div><div class="name">{{name}}</div><div class="meta">Scouting data isn't tracked yet &mdash; the notes below are illustrative.</div></div></div>
+<div class="who"><div class="avatar">{{letter}}</div><div><div class="name">{{name}}</div><div class="meta">{{HistoryLine(sc)}}</div></div></div>
 <div class="body">
 <div class="col-main">
 <div class="hlabel">HABITS TO WATCH FOR</div>
-<div class="habit"><span class="hnum">1</span><div class="htext">Watch their ledge options &mdash; note habits here once you start tagging notes as #habit.</div></div>
-<div class="habit"><span class="hnum">2</span><div class="htext">Recovery tendencies show up here after a few recorded sets against this opponent.</div></div>
-<div class="plan"><div class="planlabel">YOUR GAME PLAN</div><div class="plantext">Add a game plan note during a set and it'll show up here automatically next time you play this opponent.</div></div>
-<div class="focus"><span class="focuslabel">FOCUS</span><div class="htext">Set a practice focus and it'll follow you into every match.</div></div>
+{{habits}}
+<div class="plan"><div class="planlabel">YOUR GAME PLAN</div><div class="plantext">{{plan}}</div></div>
+<div class="focus"><span class="focuslabel">FOCUS</span><div class="htext">{{focus}}</div></div>
 </div>
 <div class="col-side">
 <div class="slabel">STAGES</div>
 <div class="stages">
-<div class="srow"><span class="sname">Battlefield</span><div class="sbar"><div class="sfill" style="width:0%;background:#6d7694"></div></div><span class="sscore">&mdash;</span></div>
-<div class="srow"><span class="sname">Smashville</span><div class="sbar"><div class="sfill" style="width:0%;background:#6d7694"></div></div><span class="sscore">&mdash;</span></div>
-<div class="srow"><span class="sname">PS2</span><div class="sbar"><div class="sfill" style="width:0%;background:#6d7694"></div></div><span class="sscore">&mdash;</span></div>
-<div class="chips"><span class="chip ban">no data yet</span></div>
+{{stages}}
 </div>
 <div class="slabel">PAST SETS</div>
-<div class="sets"><div class="setrow">No recorded sets against {{name}} yet.</div></div>
+<div class="sets">{{sets}}</div>
 <div class="obs"><span class="reado"></span>OBS ready &middot; recording starts automatically</div>
 </div>
 </div>
@@ -109,10 +190,25 @@ internal static class BriefingHtml
 """;
     }
 
-    public static string Card(string opponent)
+    public static string Card(string opponent, AppData data)
     {
+        var sc = Scout(data, opponent);
         var name = Esc(opponent);
         var letter = InitialLetter(opponent);
+
+        var habits = sc.Habits.Count == 0
+            ? """<div class="htext">Tag notes with #habit during sets to build a cheat sheet for next time.</div>"""
+            : string.Join("", sc.Habits.Take(3).Select(h => $"""<div class="htext">{Esc(h)}</div>"""));
+
+        var plan = sc.GamePlan != null
+            ? Esc(sc.GamePlan)
+            : $"Add a game plan and it'll show up here on your next match against {name}.";
+
+        var sets = sc.Finished.Count == 0
+            ? $"""<div class="setrow">No recorded sets against {name} yet.</div>"""
+            : string.Join("", sc.Finished.Take(3).Select(m =>
+                $"""<div class="setrow">{SetDate(m)} &nbsp;&middot;&nbsp; {SetResultSpan(m)}</div>"""));
+
         return $$"""
 <!DOCTYPE html><html><head><meta charset="utf-8">{{FontLink}}
 <style>*{box-sizing:border-box}html,body{margin:0;background:transparent}
@@ -128,24 +224,26 @@ internal static class BriefingHtml
 .avatar{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#ff4d94,#8b6cff);display:flex;align-items:center;justify-content:center;font:800 16px Sora,sans-serif;color:#fff;flex:none}
 .name{font:800 15px Sora,sans-serif}
 .meta{font:400 10px Sora,sans-serif;color:#6d7694}
-.body{flex:1;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-height:0}
+.body{flex:1;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-height:0;overflow-y:auto}
 .hlabel{font:700 10px Sora,sans-serif;letter-spacing:.12em;color:#ff9dc4}
 .htext{font:600 11.5px/1.5 Sora,sans-serif;color:#f0e6ee;border-left:2px solid #ff4d94;padding-left:9px}
 .plan{background:rgba(61,220,132,.07);border:1px solid rgba(61,220,132,.25);border-radius:9px;padding:8px 11px;display:flex;flex-direction:column;gap:3px}
 .planlabel{font:700 9.5px Sora,sans-serif;color:#7fe8ad;letter-spacing:.1em}
 .plantext{font:400 11px/1.5 Sora,sans-serif;color:#d4daea}
+.slabel{font:700 10px Sora,sans-serif;letter-spacing:.12em;color:#6d7694;margin-top:2px}
 .setrow{padding:5px 0;font:400 10.5px Sora,sans-serif;color:#a9b2cc}
 .foot{padding:8px 14px;display:flex;align-items:center;gap:7px;border-top:1px solid rgba(255,255,255,.07);font:400 10px Sora,sans-serif;color:#6d7694}
 .reado{width:6px;height:6px;border-radius:50%;background:#3ddc84;flex:none}
 </style></head>
 <body><div class="card">
 <div class="hdr"><span class="dot"></span><span class="tag">MATCH FOUND</span><span class="sub">auto-hides at game start</span><span class="actions"><span data-action="close">&#10005;</span></span></div>
-<div class="who"><div class="avatar">{{letter}}</div><div><div class="name">{{name}}</div><div class="meta">No recorded history yet</div></div></div>
+<div class="who"><div class="avatar">{{letter}}</div><div><div class="name">{{name}}</div><div class="meta">{{HistoryLine(sc)}}</div></div></div>
 <div class="body">
 <div class="hlabel">HABITS</div>
-<div class="htext">Tag notes with #habit during sets to build a cheat sheet for next time.</div>
-<div class="plan"><div class="planlabel">GAME PLAN</div><div class="plantext">Add a game plan note and it'll show up here on your next match against {{name}}.</div></div>
-<div class="setrow">No recorded sets against {{name}} yet.</div>
+{{habits}}
+<div class="plan"><div class="planlabel">GAME PLAN</div><div class="plantext">{{plan}}</div></div>
+<div class="slabel">PAST SETS</div>
+{{sets}}
 </div>
 <div class="foot"><span class="reado"></span>OBS ready &middot; recording starts with game 1</div>
 </div>{{CloseScript}}{{DragScript}}

@@ -40,8 +40,16 @@ internal sealed class TrayAppContext : ApplicationContext
     private Form? _briefing;
     private MainWindow? _mainWindow;
 
+    // Recorder events arrive on thread-pool threads, but everything UI
+    // (NotifyIcon, briefing windows, WebView2) must run on the main STA
+    // thread. The menu/tray can't marshal reliably before their handles
+    // exist (InvokeRequired is false without a handle), so use a dedicated
+    // control whose handle is created eagerly in the constructor.
+    private readonly Control _uiThread = new();
+
     public TrayAppContext()
     {
+        _ = _uiThread.Handle; // force handle creation on the UI thread
         _config = Config.Load();
         _store = Store.Load();
         _recorder = new RecorderService(_config, _store);
@@ -75,41 +83,23 @@ internal sealed class TrayAppContext : ApplicationContext
         };
         _tray.DoubleClick += (_, _) => ShowMainWindow();
 
-        _recorder.StateChanged += () =>
+        _recorder.StateChanged += () => RunOnUiThread(() =>
         {
             var text = _recorder.IsRecording
                 ? $"Recording vs {_recorder.Opponent ?? "unknown"}"
                 : "Idle";
-            // NotifyIcon must be touched on the UI thread.
-            var syncMenu = menu;
-            if (syncMenu.InvokeRequired) syncMenu.BeginInvoke(Apply);
-            else Apply();
-
-            void Apply()
+            _statusItem.Text = text;
+            _tray.Text = ("PeakRecorder — " + text) is { Length: > 63 } t ? t[..63] : "PeakRecorder — " + text;
+            if (_recorder.IsRecording)
             {
-                _statusItem.Text = text;
-                _tray.Text = ("PeakRecorder — " + text) is { Length: > 63 } t ? t[..63] : "PeakRecorder — " + text;
-                if (_recorder.IsRecording)
-                {
-                    _tray.ShowBalloonTip(2000, "PeakRecorder", text, ToolTipIcon.Info);
-                    CloseBriefing(); // recording started -> game is live, dismiss the briefing
-                }
+                _tray.ShowBalloonTip(2000, "PeakRecorder", text, ToolTipIcon.Info);
+                CloseBriefing(); // recording started -> game is live, dismiss the briefing
             }
-        };
+        });
 
-        _recorder.MatchFound += opponent =>
-        {
-            var syncMenu = menu;
-            if (syncMenu.InvokeRequired) syncMenu.BeginInvoke(() => ShowBriefing(opponent));
-            else ShowBriefing(opponent);
-        };
+        _recorder.MatchFound += opponent => RunOnUiThread(() => ShowBriefing(opponent));
 
-        _recorder.MatchDismissed += () =>
-        {
-            var syncMenu = menu;
-            if (syncMenu.InvokeRequired) syncMenu.BeginInvoke(CloseBriefing);
-            else CloseBriefing();
-        };
+        _recorder.MatchDismissed += () => RunOnUiThread(CloseBriefing);
 
         try
         {
@@ -153,13 +143,21 @@ internal sealed class TrayAppContext : ApplicationContext
         return root;
     }
 
+    private void RunOnUiThread(Action action)
+    {
+        if (_uiThread.InvokeRequired) _uiThread.BeginInvoke(action);
+        else action();
+    }
+
     private void ShowBriefing(string opponent)
     {
         CloseBriefing();
+        if (_config.BriefingStyle == "off") return;
+        var snapshot = _store.Snapshot();
         _briefing = _config.BriefingStyle switch
         {
-            "full" => new BriefingWindow(opponent),
-            "card" => new BriefingCard(opponent),
+            "full" => new BriefingWindow(opponent, snapshot),
+            "card" => new BriefingCard(opponent, snapshot),
             _ => null,
         };
         _briefing?.Show();
@@ -201,6 +199,7 @@ internal sealed class TrayAppContext : ApplicationContext
         if (_mainWindow is { IsDisposed: false }) _mainWindow.Close();
         _tray.Visible = false;
         _tray.Dispose();
+        _uiThread.Dispose();
         _bridge.Dispose();
         _recorder.Dispose();
         Log.Write("PeakRecorder exited.");

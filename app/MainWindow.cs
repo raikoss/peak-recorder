@@ -224,11 +224,21 @@ internal sealed class MainWindow : Form
     private void OpenVideo(string matchId)
     {
         var m = _store.Snapshot().Matches.FirstOrDefault(x => x.Id == matchId);
-        if (m?.VideoPath == null || !File.Exists(m.VideoPath))
+        var path = m?.VideoPath;
+        if (path != null && !File.Exists(path))
+        {
+            // Records written before the remux race was fixed can point at a
+            // .mkv that was deleted after remuxing; fall back to the sibling
+            // with the same name and another extension (e.g. the .mp4).
+            var dir = Path.GetDirectoryName(path);
+            if (dir != null && Directory.Exists(dir))
+                path = Directory.EnumerateFiles(dir, Path.GetFileNameWithoutExtension(path) + ".*").FirstOrDefault();
+        }
+        if (path == null)
         {
             MessageBox.Show("No video file for this match yet.", "PeakRecorder", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
-        Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{m.VideoPath}\"") { UseShellExecute = true });
+        Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true });
     }
 }

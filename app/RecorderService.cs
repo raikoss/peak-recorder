@@ -151,13 +151,21 @@ public sealed class RecorderService : IDisposable
 
         var recordId = CurrentMatchRecordId;
         string? finalPath = outputPath;
+        string? renamed = null;
         if (outputPath != null)
         {
-            var renamed = await RenameRecordingAsync(outputPath, recordId);
+            renamed = await RenameRecordingAsync(outputPath);
             Log.Write(renamed != null ? $"Renamed to: {renamed}" : "Rename failed; file kept with original name.");
             if (renamed != null) finalPath = renamed;
         }
         if (recordId != null) _store.EndMatch(recordId, finalPath);
+        // Watch for OBS's auto-remuxed copy only after the record has its
+        // path, so the remuxed file's EndMatch is always the last write —
+        // otherwise the record can end up pointing at the .mkv the remux
+        // cleanup deletes.
+        if (outputPath != null && renamed != null)
+            _ = RenameRemuxedSiblingAsync(outputPath, Path.Combine(
+                Path.GetDirectoryName(renamed)!, Path.GetFileNameWithoutExtension(renamed)), renamed, recordId);
         CurrentMatchRecordId = null;
         Opponent = null;
         MatchId = null;
@@ -249,7 +257,7 @@ public sealed class RecorderService : IDisposable
         }
     }
 
-    private async Task<string?> RenameRecordingAsync(string outputPath, string? recordId)
+    private async Task<string?> RenameRecordingAsync(string outputPath)
     {
         var ext = Path.GetExtension(outputPath);
         if (Path.GetDirectoryName(outputPath) == null) return null;
@@ -274,10 +282,6 @@ public sealed class RecorderService : IDisposable
                     for (var i = 2; File.Exists(target); i++)
                         target = Path.Combine(dir, $"{name}_{i}{ext}");
                     File.Move(outputPath, target);
-                    // OBS's "automatically remux to mp4" writes a sibling file
-                    // with the original name after the recording stops.
-                    _ = RenameRemuxedSiblingAsync(outputPath, Path.Combine(
-                        Path.GetDirectoryName(target)!, Path.GetFileNameWithoutExtension(target)), target, recordId);
                     return target;
                 }
             }
@@ -287,6 +291,8 @@ public sealed class RecorderService : IDisposable
         return null;
     }
 
+    // OBS's "automatically remux to mp4" writes a sibling file with the
+    // original name after the recording stops.
     private async Task RenameRemuxedSiblingAsync(string originalPath, string targetWithoutExt, string renamedOriginal, string? recordId)
     {
         var dir = Path.GetDirectoryName(originalPath)!;
