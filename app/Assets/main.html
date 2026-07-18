@@ -66,6 +66,11 @@ textarea{resize:vertical;font-family:Sora,sans-serif}
 .body{flex:1;display:flex;min-height:0}
 .notes-col{flex:1.35;display:flex;flex-direction:column;padding:12px 20px 14px;gap:9px;min-width:0;overflow-y:auto}
 .note{display:flex;gap:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:9px 12px}
+.note-actions{margin-left:auto;display:flex;gap:8px;opacity:0;flex:none;align-self:flex-start}
+.note:hover .note-actions{opacity:1}
+.note-actions span{cursor:pointer;color:#6d7694;font-size:12px}
+.note-actions span:hover{color:#e8ebf5}
+.note-actions span.danger:hover{color:#ff8f8f}
 .note-ts{font:700 11px ui-monospace,Consolas,monospace;color:#45c4ff;background:rgba(69,196,255,.12);border-radius:5px;padding:2px 7px;height:fit-content;flex:none;cursor:pointer}
 .note-body{font:400 12px/1.5 Sora,sans-serif;color:#d4daea;flex:1}
 .composer{margin-top:auto;display:flex;flex-direction:column;gap:7px}
@@ -218,7 +223,7 @@ function wireCommon() {
   if (filterEl) filterEl.addEventListener('input', () => { ui.filter = filterEl.value; render(); });
 }
 
-const ui = { filter: '', selectedMatchId: null, activeTags: [] };
+const ui = { filter: '', selectedMatchId: null, activeTags: [], editingNoteId: null, editingTags: [] };
 
 // ================= LIBRARY (turn 2a) =================
 
@@ -314,11 +319,33 @@ function matchDetail(m, s) {
 }
 
 function noteRow(n) {
+  if (ui.editingNoteId === n.id) return noteEditor(n);
   const tags = (n.tags || []).map(tagChip).join(' ');
   const ts = n.timestampSeconds >= 0
     ? `<span class="note-ts" title="click to copy">${fmtTime(n.timestampSeconds)}</span>`
     : `<span class="note-ts" style="background:rgba(255,255,255,.06);color:#6d7694" title="added after the match">vod</span>`;
-  return `<div class="note">${ts}<div class="note-body">${esc(n.text)} ${tags}</div></div>`;
+  return `<div class="note">${ts}<div class="note-body">${esc(n.text)} ${tags}</div>
+    <div class="note-actions">
+      <span title="edit note" data-click="editNote" data-arg="${n.id}">✎</span>
+      <span class="danger" title="delete note" data-click="deleteNote" data-arg="${n.id}">✕</span>
+    </div></div>`;
+}
+
+const TAG_CLASSES = { habit: 'habit', adapt: 'adapt', 'work-on': 'workon', tech: 'tech' };
+
+function noteEditor(n) {
+  return `
+  <div class="note" style="flex-direction:column;gap:8px;border-color:rgba(69,196,255,.35)">
+    <div class="row" style="gap:8px;width:100%">
+      <input id="noteEditInput" type="text" style="flex:1" value="${esc(n.text)}" data-enter="saveNoteEdit">
+      <div class="btn primary" data-click="saveNoteEdit">Save</div>
+      <div class="btn" data-click="cancelNoteEdit">Cancel</div>
+    </div>
+    <div class="quicktags">
+      <span class="muted" style="font-size:10px">tags:</span>
+      ${Object.keys(TAG_CLASSES).map(t => `<span class="chip ${TAG_CLASSES[t]} ${ui.editingTags.includes(t) ? 'active' : ''}" data-click="toggleEditTag" data-arg="${t}">#${t}</span>`).join('')}
+    </div>
+  </div>`;
 }
 function tagChip(t) {
   const cls = { habit: 'habit', adapt: 'adapt', 'work-on': 'workon', tech: 'tech' }[t] || 'habit';
@@ -336,7 +363,7 @@ function composer(m, live = true) {
     </div>
     <div class="quicktags">
       <span class="muted" style="font-size:10px">quick-tag:</span>
-      ${tags.map(t => `<span class="chip ${{ habit: 'habit', adapt: 'adapt', 'work-on': 'workon', tech: 'tech' }[t]} ${ui.activeTags.includes(t) ? 'active' : ''}" data-click="toggleTag" data-arg="${t}">#${t}</span>`).join('')}
+      ${tags.map(t => `<span class="chip ${TAG_CLASSES[t]} ${ui.activeTags.includes(t) ? 'active' : ''}" data-click="toggleTag" data-arg="${t}">#${t}</span>`).join('')}
     </div>
   </div>`;
 }
@@ -601,6 +628,35 @@ const handlers = {
     if (!id) return;
     post({ action: 'addNote', matchId: id, text: input.value, tags: [...ui.activeTags] });
     ui.activeTags = [];
+  },
+  editNote(el, id) {
+    const n = S.data.matches.flatMap(m => m.notes).find(x => x.id === Number(id));
+    if (!n) return;
+    ui.editingNoteId = n.id;
+    ui.editingTags = [...(n.tags || [])];
+    render();
+  },
+  toggleEditTag(el, tag) {
+    const i = ui.editingTags.indexOf(tag);
+    if (i >= 0) ui.editingTags.splice(i, 1); else ui.editingTags.push(tag);
+    render();
+  },
+  saveNoteEdit() {
+    const input = document.getElementById('noteEditInput');
+    if (!input || !input.value.trim() || ui.editingNoteId == null) return;
+    post({ action: 'updateNote', noteId: ui.editingNoteId, text: input.value, tags: [...ui.editingTags] });
+    ui.editingNoteId = null;
+    ui.editingTags = [];
+  },
+  cancelNoteEdit() {
+    ui.editingNoteId = null;
+    ui.editingTags = [];
+    render();
+  },
+  deleteNote(el, id) {
+    if (!confirm('Delete this note?')) return;
+    if (ui.editingNoteId === Number(id)) { ui.editingNoteId = null; ui.editingTags = []; }
+    post({ action: 'deleteNote', noteId: Number(id) });
   },
   editFocus() {
     const val = prompt('This week\'s focus:', S.data.focusGoal || '');

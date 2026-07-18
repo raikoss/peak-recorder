@@ -5,6 +5,8 @@ namespace PeakRecorder;
 
 public sealed class Note
 {
+    /// <summary>SQLite rowid; 0 until the note has been written and re-read.</summary>
+    public long Id { get; set; }
     public int TimestampSeconds { get; set; }
     public string Text { get; set; } = "";
     public List<string> Tags { get; set; } = [];
@@ -212,7 +214,7 @@ public sealed class Store
             using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = """
-                    SELECT match_record_id, timestamp_seconds, text, tags, created_at
+                    SELECT match_record_id, timestamp_seconds, text, tags, created_at, id
                     FROM notes ORDER BY id
                     """;
                 using var r = cmd.ExecuteReader();
@@ -225,6 +227,7 @@ public sealed class Store
                         Text = r.GetString(2),
                         Tags = ParseStringList(r.GetString(3)),
                         CreatedAt = ParseDate(r.GetString(4)),
+                        Id = r.GetInt64(5),
                     });
                 }
             }
@@ -278,6 +281,31 @@ public sealed class Store
             cmd.Parameters.AddWithValue("$mine", (object?)myCharacter ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$theirs", (object?)opponentCharacter ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$id", matchRecordId);
+            cmd.ExecuteNonQuery();
+        });
+    }
+
+    public void UpdateNote(long noteId, string text, List<string> tags)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        Mutate(conn =>
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "UPDATE notes SET text = $text, tags = $tags WHERE id = $id";
+            cmd.Parameters.AddWithValue("$text", text.Trim());
+            cmd.Parameters.AddWithValue("$tags", JsonSerializer.Serialize(tags));
+            cmd.Parameters.AddWithValue("$id", noteId);
+            cmd.ExecuteNonQuery();
+        });
+    }
+
+    public void DeleteNote(long noteId)
+    {
+        Mutate(conn =>
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "DELETE FROM notes WHERE id = $id";
+            cmd.Parameters.AddWithValue("$id", noteId);
             cmd.ExecuteNonQuery();
         });
     }

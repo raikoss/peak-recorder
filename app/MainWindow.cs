@@ -209,6 +209,17 @@ internal sealed class MainWindow : Form
                         msg["tags"]?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? []);
                     break;
 
+                case "updateNote":
+                    _store.UpdateNote(
+                        msg!["noteId"]!.GetValue<long>(),
+                        msg["text"]!.GetValue<string>(),
+                        msg["tags"]?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? []);
+                    break;
+
+                case "deleteNote":
+                    _store.DeleteNote(msg!["noteId"]!.GetValue<long>());
+                    break;
+
                 case "updateMatchMeta":
                     _store.UpdateMatchMeta(
                         msg!["matchId"]!.GetValue<string>(),
