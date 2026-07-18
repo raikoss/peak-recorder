@@ -146,6 +146,51 @@
     return main.innerText || "";
   }
 
+  // ---- result parsing --------------------------------------------------------
+
+  // A finished match names the winner in the score panel ("<name> won this
+  // match.") and in chat ("Server: <name> won the Match."), and the chat logs
+  // every completed game ("Server: <name> won Game 2." — dump 2026-07-07,
+  // match 265360, including the deciding game). Same anchoring as the finish
+  // patterns, so typed chat can't spoof any of it.
+  const WINNER_RES = [
+    /^([^:\n]{1,40}) won this match\b/im,
+    /^Server: (.{1,40}?) won the Match/m,
+  ];
+  const GAME_LINE_RE = /^Server: (.{1,40}?) won Game \d+/gm;
+
+  function sameName(a, b) {
+    return !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
+  }
+
+  // Returns {result, gamesWon, gamesLost} from my perspective, or {} when the
+  // match ended without a winner (cancelled / DQ) or the winner text doesn't
+  // match a known participant. Anything that isn't the opponent is me — a
+  // match page only ever has the two participants as named players.
+  function matchResult(text, players) {
+    let winner = null;
+    for (const re of WINNER_RES) {
+      const m = re.exec(text);
+      if (m) {
+        winner = m[1].trim();
+        break;
+      }
+    }
+    if (!winner || !state.opponent) return {};
+    const myName = state.myNameAuto || state.myName;
+    let result = null;
+    if (sameName(winner, state.opponent)) result = "L";
+    else if (sameName(winner, myName) || players.some((p) => sameName(p.name, winner))) result = "W";
+    if (!result) return {};
+    let gamesWon = 0;
+    let gamesLost = 0;
+    for (const m of text.matchAll(GAME_LINE_RE)) {
+      if (sameName(m[1], state.opponent)) gamesLost++;
+      else gamesWon++;
+    }
+    return { result, gamesWon, gamesLost };
+  }
+
   // Returns a string describing WHY the page looks finished, or null.
   function finishedReason(text) {
     for (const re of FINISHED_PATTERNS) {
@@ -278,7 +323,12 @@
     if (finished && !state.finishedSent) {
       state.finishedSent = true;
       if (state.startedSent) {
-        send("event", { type: "match_ended", matchId: id, opponent: state.opponent });
+        send("event", {
+          type: "match_ended",
+          matchId: id,
+          opponent: state.opponent,
+          ...matchResult(text, players),
+        });
       }
     }
   }

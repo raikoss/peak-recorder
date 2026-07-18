@@ -83,12 +83,19 @@ public sealed class BridgeServer : IDisposable
                         .Where(s => !string.IsNullOrWhiteSpace(s))
                         .Select(s => s!)
                         .ToArray();
+                    var resultStr = body["result"]?.GetValue<string>();
+                    var matchResult = resultStr is "W" or "L"
+                        ? new MatchResultInfo(resultStr,
+                            body["gamesWon"]?.GetValue<int>() ?? 0,
+                            body["gamesLost"]?.GetValue<int>() ?? 0)
+                        : null;
                     // Fire-and-forget so slow OBS startup doesn't stall the extension.
                     _ = _recorder.HandleEventAsync(
                         type,
                         body["matchId"]?.GetValue<string>(),
                         body["opponent"]?.GetValue<string>(),
-                        players);
+                        players,
+                        matchResult);
                     await WriteJsonAsync(res, new { accepted = true });
                 }
             }

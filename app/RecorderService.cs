@@ -3,6 +3,10 @@ using System.Text.Json.Nodes;
 
 namespace PeakRecorder;
 
+/// <summary>Auto-detected outcome of a finished match, from my perspective,
+/// as parsed from the match page by the extension.</summary>
+public sealed record MatchResultInfo(string Result, int GamesWon, int GamesLost);
+
 /// <summary>
 /// Orchestrates the whole flow: ensure OBS is running, connect to
 /// obs-websocket, start/stop recording, rename the output file.
@@ -40,12 +44,13 @@ public sealed class RecorderService : IDisposable
         _store = store;
     }
 
-    public async Task HandleEventAsync(string type, string? matchId, string? opponent, string[]? players)
+    public async Task HandleEventAsync(string type, string? matchId, string? opponent, string[]? players, MatchResultInfo? result = null)
     {
         await _gate.WaitAsync();
         try
         {
-            Log.Write($"Event: {type} matchId={matchId} opponent={opponent ?? "?"} players=[{string.Join(", ", players ?? [])}]");
+            Log.Write($"Event: {type} matchId={matchId} opponent={opponent ?? "?"} players=[{string.Join(", ", players ?? [])}]" +
+                      (result != null ? $" result={result.Result} {result.GamesWon}-{result.GamesLost}" : ""));
             switch (type)
             {
                 case "match_started":
@@ -83,7 +88,7 @@ public sealed class RecorderService : IDisposable
                     // Ignore stray end-events from a different match page.
                     if (type == "match_ended" && MatchId != null && matchId != null && matchId != MatchId) break;
                     UpdateOpponent(matchId, opponent, players);
-                    await StopRecordingAndRenameAsync();
+                    await StopRecordingAndRenameAsync(result);
                     break;
 
                 default:
@@ -135,7 +140,7 @@ public sealed class RecorderService : IDisposable
     public int RecordingElapsedSeconds =>
         IsRecording ? (int)(DateTime.Now - _recordingStartedAt).TotalSeconds : 0;
 
-    private async Task StopRecordingAndRenameAsync()
+    private async Task StopRecordingAndRenameAsync(MatchResultInfo? result = null)
     {
         string? outputPath = null;
         try
@@ -159,6 +164,8 @@ public sealed class RecorderService : IDisposable
             if (renamed != null) finalPath = renamed;
         }
         if (recordId != null) _store.EndMatch(recordId, finalPath);
+        if (recordId != null && result != null)
+            _store.SetMatchResult(recordId, result.Result, result.GamesWon, result.GamesLost);
         // Watch for OBS's auto-remuxed copy only after the record has its
         // path, so the remuxed file's EndMatch is always the last write —
         // otherwise the record can end up pointing at the .mkv the remux

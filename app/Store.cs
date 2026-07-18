@@ -282,6 +282,22 @@ public sealed class Store
         });
     }
 
+    /// <summary>Auto-detected result reported by the extension when a match
+    /// finishes; stages/characters stay manual (UpdateMatchMeta).</summary>
+    public void SetMatchResult(string matchRecordId, string result, int gamesWon, int gamesLost)
+    {
+        Mutate(conn =>
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "UPDATE matches SET result = $result, games_won = $won, games_lost = $lost WHERE id = $id";
+            cmd.Parameters.AddWithValue("$result", result);
+            cmd.Parameters.AddWithValue("$won", gamesWon);
+            cmd.Parameters.AddWithValue("$lost", gamesLost);
+            cmd.Parameters.AddWithValue("$id", matchRecordId);
+            cmd.ExecuteNonQuery();
+        });
+    }
+
     public void SetFocusGoal(string text) => Mutate(conn => SetSetting(conn, "focus_goal", text.Trim()));
 
     public void SetGamePlan(string opponent, string text) =>
