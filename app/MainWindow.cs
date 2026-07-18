@@ -10,12 +10,17 @@ namespace PeakRecorder;
 /// Main library / player / settings window (design turns 2a/2b/2c). One
 /// WebView2 hosting a small hand-rolled SPA in Assets/main.html; state is
 /// pushed down as JSON on every change, actions come back as JSON messages.
+/// With <c>overlay: true</c> the same window becomes the floating live-match
+/// companion: always-on-top, pinned to the live page, shown beside the
+/// browser for the duration of a match so notes can be jotted without
+/// alt-tabbing (lifecycle managed by TrayAppContext).
 /// </summary>
 internal sealed class MainWindow : Form
 {
     private readonly Config _config;
     private readonly Store _store;
     private readonly RecorderService _recorder;
+    private readonly bool _overlay;
     private readonly WebView2 _web = new() { Dock = DockStyle.Fill };
 
     private string _page = "library";
@@ -27,17 +32,34 @@ internal sealed class MainWindow : Form
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
-    public MainWindow(Config config, Store store, RecorderService recorder)
+    public MainWindow(Config config, Store store, RecorderService recorder, bool overlay = false)
     {
         _config = config;
         _store = store;
         _recorder = recorder;
+        _overlay = overlay;
 
-        Text = "PeakRecorder";
-        ClientSize = new Size(1080, 680);
-        MinimumSize = new Size(760, 480);
-        StartPosition = FormStartPosition.CenterScreen;
         BackColor = Color.FromArgb(0x10, 0x14, 0x26);
+        if (overlay)
+        {
+            Text = "PeakRecorder — Live match";
+            FormBorderStyle = FormBorderStyle.SizableToolWindow;
+            TopMost = true;
+            ShowInTaskbar = false;
+            MinimumSize = new Size(360, 460);
+            ClientSize = new Size(470, 690);
+            StartPosition = FormStartPosition.Manual;
+            var wa = Screen.PrimaryScreen!.WorkingArea;
+            Location = new Point(wa.Right - Width - 24, wa.Top + 24);
+            _page = "live";
+        }
+        else
+        {
+            Text = "PeakRecorder";
+            ClientSize = new Size(1080, 680);
+            MinimumSize = new Size(760, 480);
+            StartPosition = FormStartPosition.CenterScreen;
+        }
         Controls.Add(_web);
 
         _store.Changed += PushStateOnUiThread;
@@ -96,15 +118,20 @@ internal sealed class MainWindow : Form
 
         // Auto-switch on phase transitions only, so the user can still browse
         // other pages mid-match; the window itself is never opened or focused.
+        // The overlay window stays pinned to the live page instead.
         var phase = _recorder.Phase;
-        if (phase != null && _lastPhase == null) _page = "live";
-        else if (phase == null && _lastPhase != null && _page == "live") _page = "library";
-        _lastPhase = phase;
+        if (!_overlay)
+        {
+            if (phase != null && _lastPhase == null) _page = "live";
+            else if (phase == null && _lastPhase != null && _page == "live") _page = "library";
+            _lastPhase = phase;
+        }
 
         var snapshot = _store.Snapshot();
         var payload = new
         {
             page = _page,
+            overlay = _overlay,
             playerName = _playerName,
             focusGoal = snapshot.FocusGoal,
             matches = snapshot.Matches,
@@ -161,6 +188,7 @@ internal sealed class MainWindow : Form
                     break;
 
                 case "navigate":
+                    if (_overlay) break; // overlay is pinned to the live page
                     _page = msg!["page"]?.GetValue<string>() ?? "library";
                     _playerName = msg["opponent"]?.GetValue<string>();
                     PushState();

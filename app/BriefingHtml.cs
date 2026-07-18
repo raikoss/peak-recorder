@@ -25,13 +25,6 @@ internal static class BriefingHtml
         "<script>document.addEventListener('click',e=>{const t=e.target.closest('[data-action]');" +
         "if(t&&window.chrome&&window.chrome.webview)window.chrome.webview.postMessage(t.dataset.action);});</script>";
 
-    // Card only: dragging the header moves the (borderless) window, unless
-    // the mousedown started on a data-action element like the close button.
-    private const string DragScript =
-        "<script>document.querySelector('.hdr').addEventListener('mousedown',e=>{" +
-        "if(e.target.closest('[data-action]'))return;" +
-        "if(window.chrome&&window.chrome.webview)window.chrome.webview.postMessage('drag');});</script>";
-
     // ---- scouting data ---------------------------------------------------------
 
     private sealed record Scouting(
@@ -190,64 +183,4 @@ internal static class BriefingHtml
 """;
     }
 
-    public static string Card(string opponent, AppData data)
-    {
-        var sc = Scout(data, opponent);
-        var name = Esc(opponent);
-        var letter = InitialLetter(opponent);
-
-        var habits = sc.Habits.Count == 0
-            ? """<div class="htext">Tag notes with #habit during sets to build a cheat sheet for next time.</div>"""
-            : string.Join("", sc.Habits.Take(3).Select(h => $"""<div class="htext">{Esc(h)}</div>"""));
-
-        var plan = sc.GamePlan != null
-            ? Esc(sc.GamePlan)
-            : $"Add a game plan and it'll show up here on your next match against {name}.";
-
-        var sets = sc.Finished.Count == 0
-            ? $"""<div class="setrow">No recorded sets against {name} yet.</div>"""
-            : string.Join("", sc.Finished.Take(3).Select(m =>
-                $"""<div class="setrow">{SetDate(m)} &nbsp;&middot;&nbsp; {SetResultSpan(m)}</div>"""));
-
-        return $$"""
-<!DOCTYPE html><html><head><meta charset="utf-8">{{FontLink}}
-<style>*{box-sizing:border-box}html,body{margin:0;background:transparent}
-.card{width:380px;height:560px;display:flex;flex-direction:column;background:#0c1020;border:1px solid rgba(255,255,255,.14);border-radius:14px;font-family:Sora,system-ui,sans-serif;color:#e8ebf5;overflow:hidden}
-.hdr{padding:10px 14px;display:flex;align-items:center;gap:8px;background:rgba(255,209,102,.07);border-bottom:1px solid rgba(255,255,255,.07);cursor:move}
-.dot{width:7px;height:7px;border-radius:50%;background:#ffd166;box-shadow:0 0 7px #ffd166;flex:none}
-.tag{font:700 10px Sora,sans-serif;color:#ffd166;letter-spacing:.1em}
-.sub{font:400 10px Sora,sans-serif;color:#6d7694}
-.actions{margin-left:auto;display:flex;gap:8px;font:400 12px Sora,sans-serif;color:#6d7694}
-.actions span{cursor:pointer}
-.actions span:hover{color:#e8ebf5}
-.who{padding:12px 14px 10px;display:flex;align-items:center;gap:11px;border-bottom:1px solid rgba(255,255,255,.07)}
-.avatar{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#ff4d94,#8b6cff);display:flex;align-items:center;justify-content:center;font:800 16px Sora,sans-serif;color:#fff;flex:none}
-.name{font:800 15px Sora,sans-serif}
-.meta{font:400 10px Sora,sans-serif;color:#6d7694}
-.body{flex:1;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-height:0;overflow-y:auto}
-.hlabel{font:700 10px Sora,sans-serif;letter-spacing:.12em;color:#ff9dc4}
-.htext{font:600 11.5px/1.5 Sora,sans-serif;color:#f0e6ee;border-left:2px solid #ff4d94;padding-left:9px}
-.plan{background:rgba(61,220,132,.07);border:1px solid rgba(61,220,132,.25);border-radius:9px;padding:8px 11px;display:flex;flex-direction:column;gap:3px}
-.planlabel{font:700 9.5px Sora,sans-serif;color:#7fe8ad;letter-spacing:.1em}
-.plantext{font:400 11px/1.5 Sora,sans-serif;color:#d4daea}
-.slabel{font:700 10px Sora,sans-serif;letter-spacing:.12em;color:#6d7694;margin-top:2px}
-.setrow{padding:5px 0;font:400 10.5px Sora,sans-serif;color:#a9b2cc}
-.foot{padding:8px 14px;display:flex;align-items:center;gap:7px;border-top:1px solid rgba(255,255,255,.07);font:400 10px Sora,sans-serif;color:#6d7694}
-.reado{width:6px;height:6px;border-radius:50%;background:#3ddc84;flex:none}
-</style></head>
-<body><div class="card">
-<div class="hdr"><span class="dot"></span><span class="tag">MATCH FOUND</span><span class="sub">auto-hides at game start</span><span class="actions"><span data-action="close">&#10005;</span></span></div>
-<div class="who"><div class="avatar">{{letter}}</div><div><div class="name">{{name}}</div><div class="meta">{{HistoryLine(sc)}}</div></div></div>
-<div class="body">
-<div class="hlabel">HABITS</div>
-{{habits}}
-<div class="plan"><div class="planlabel">GAME PLAN</div><div class="plantext">{{plan}}</div></div>
-<div class="slabel">PAST SETS</div>
-{{sets}}
-</div>
-<div class="foot"><span class="reado"></span>OBS ready &middot; recording starts with game 1</div>
-</div>{{CloseScript}}{{DragScript}}
-</body></html>
-""";
-    }
 }

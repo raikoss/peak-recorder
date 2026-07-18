@@ -93,8 +93,11 @@ internal sealed class TrayAppContext : ApplicationContext
             if (_recorder.IsRecording)
             {
                 _tray.ShowBalloonTip(2000, "PeakRecorder", text, ToolTipIcon.Info);
-                CloseBriefing(); // recording started -> game is live, dismiss the briefing
+                // The full-window briefing hides at game start; the live
+                // overlay stays up so notes can be jotted during the set.
+                if (_briefing is BriefingWindow) CloseBriefing();
             }
+            if (_recorder.Phase == null) CloseBriefing(); // match over
         });
 
         _recorder.MatchFound += opponent => RunOnUiThread(() => ShowBriefing(opponent));
@@ -122,8 +125,8 @@ internal sealed class TrayAppContext : ApplicationContext
         var root = new ToolStripMenuItem("Pre-match briefing");
         var options = new (string Value, string Label)[]
         {
-            ("card", "Floating card"),
-            ("full", "Full window"),
+            ("card", "Floating live window"),
+            ("full", "Full window (pre-match only)"),
             ("off", "Off"),
         };
         ToolStripMenuItem[] items = options.Select(o =>
@@ -152,12 +155,10 @@ internal sealed class TrayAppContext : ApplicationContext
     private void ShowBriefing(string opponent)
     {
         CloseBriefing();
-        if (_config.BriefingStyle == "off") return;
-        var snapshot = _store.Snapshot();
         _briefing = _config.BriefingStyle switch
         {
-            "full" => new BriefingWindow(opponent, snapshot),
-            "card" => new BriefingCard(opponent, snapshot),
+            "full" => new BriefingWindow(opponent, _store.Snapshot()),
+            "card" => new MainWindow(_config, _store, _recorder, overlay: true),
             _ => null,
         };
         _briefing?.Show();
