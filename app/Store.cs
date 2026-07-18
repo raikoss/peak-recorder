@@ -303,6 +303,22 @@ public sealed class Store
     public void SetGamePlan(string opponent, string text) =>
         Mutate(conn => UpsertGamePlan(conn, opponent.Trim().ToLowerInvariant(), text.Trim()));
 
+    /// <summary>Removes a pre-match record whose match never started, unless
+    /// the user already jotted notes on it — those are worth keeping.</summary>
+    public void DeleteMatchIfEmpty(string matchRecordId)
+    {
+        Mutate(conn =>
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = """
+                DELETE FROM matches WHERE id = $id
+                  AND NOT EXISTS (SELECT 1 FROM notes WHERE match_record_id = $id)
+                """;
+            cmd.Parameters.AddWithValue("$id", matchRecordId);
+            cmd.ExecuteNonQuery();
+        });
+    }
+
     public void DeleteMatch(string matchRecordId)
     {
         Mutate(conn =>

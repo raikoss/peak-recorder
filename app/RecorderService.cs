@@ -22,9 +22,14 @@ public sealed class RecorderService : IDisposable
     public string? Opponent { get; private set; }
     public string? MatchId { get; private set; }
 
-    /// <summary>Id of the Store MatchRecord for the current/last recording,
-    /// so the main window can attach notes to it.</summary>
+    /// <summary>Id of the Store MatchRecord for the current match, so the
+    /// main window can attach notes to it. Created as soon as a match is
+    /// found (stage striking) so notes can be jotted before game 1.</summary>
     public string? CurrentMatchRecordId { get; private set; }
+
+    /// <summary>"striking" while a found match waits to start, "recording"
+    /// while OBS is rolling, null when idle.</summary>
+    public string? Phase => IsRecording ? "recording" : CurrentMatchRecordId != null ? "striking" : null;
 
     private DateTime _recordingStartedAt;
 
@@ -69,10 +74,17 @@ public sealed class RecorderService : IDisposable
 
                 case "match_found":
                     UpdateOpponent(matchId, opponent, players);
+                    if (!IsRecording && CurrentMatchRecordId == null && !string.IsNullOrWhiteSpace(Opponent))
+                        CurrentMatchRecordId = _store.StartMatch(MatchId ?? "", Opponent!).Id;
                     if (!string.IsNullOrWhiteSpace(Opponent)) MatchFound?.Invoke(Opponent);
                     break;
 
                 case "match_dismissed":
+                    if (!IsRecording && CurrentMatchRecordId != null)
+                    {
+                        _store.DeleteMatchIfEmpty(CurrentMatchRecordId);
+                        CurrentMatchRecordId = null;
+                    }
                     MatchId = null;
                     Opponent = null;
                     MatchDismissed?.Invoke();
@@ -131,7 +143,8 @@ public sealed class RecorderService : IDisposable
         }
         IsRecording = true;
         _recordingStartedAt = DateTime.Now;
-        CurrentMatchRecordId = _store.StartMatch(MatchId ?? "", Opponent ?? "unknown").Id;
+        // A record may already exist from the match_found (striking) phase.
+        CurrentMatchRecordId ??= _store.StartMatch(MatchId ?? "", Opponent ?? "unknown").Id;
         Log.Write($"Recording started (opponent: {Opponent ?? "unknown"}).");
     }
 

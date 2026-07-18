@@ -189,6 +189,7 @@ function render() {
     if (!s) { app.innerHTML = ''; return; }
     if (s.page === 'settings') app.innerHTML = renderSettings(s);
     else if (s.page === 'player') app.innerHTML = renderPlayer(s);
+    else if (s.page === 'live') app.innerHTML = renderLive(s);
     else app.innerHTML = renderLibrary(s);
     wireCommon();
   });
@@ -242,7 +243,8 @@ function renderLibrary(s) {
     <div class="brand">
       <div class="brand-row">
         <span class="brand-title">PEAK<span>RECORDER</span></span>
-        ${s.recording.isRecording ? `<span class="rec-indicator"><span class="dot" style="background:#ff4d94;box-shadow:0 0 6px #ff4d94"></span>REC</span>` : ''}
+        ${s.recording.phase === 'recording' ? `<span class="rec-indicator link" data-click="openLive" style="text-decoration:none"><span class="dot" style="background:#ff4d94;box-shadow:0 0 6px #ff4d94"></span>REC</span>` :
+          s.recording.phase === 'striking' ? `<span class="rec-indicator link" data-click="openLive" style="text-decoration:none;color:#ffd166"><span class="dot" style="background:#ffd166;box-shadow:0 0 6px #ffd166"></span>MATCH FOUND</span>` : ''}
       </div>
       <div class="focus-box" data-click="editFocus">
         <div class="focus-label">THIS WEEK'S FOCUS</div>
@@ -263,11 +265,11 @@ function renderLibrary(s) {
 }
 
 function matchRow(m, s) {
-  const live = s.recording.isRecording && s.recording.currentMatchRecordId === m.id;
+  const live = !!s.recording.phase && s.recording.currentMatchRecordId === m.id;
   const sel = ui.selectedMatchId ? ui.selectedMatchId === m.id : (!ui.selectedMatchId && m === pickSelectedMatch(s));
   const r = resultLabel(m);
   return `
-  <div class="match-row ${live ? 'live' : (sel ? 'selected' : '')}" data-click="selectMatch" data-arg="${m.id}">
+  <div class="match-row ${live ? 'live' : (sel ? 'selected' : '')}" data-click="${live ? 'openLive' : 'selectMatch'}" data-arg="${m.id}">
     <div class="match-top">
       <span class="match-opp">${esc(m.opponent)}</span>
       ${live ? '<span style="margin-left:auto;font:700 10.5px Sora,sans-serif;color:#ff9dc4">LIVE</span>' :
@@ -436,6 +438,78 @@ function renderPlayer(s) {
   </div>`;
 }
 
+// ================= LIVE MATCH =================
+
+function renderLive(s) {
+  const rec = s.recording;
+  const m = s.matches.find(x => x.id === rec.currentMatchRecordId);
+  if (!rec.phase || !m) {
+    return `
+    <div class="main" style="width:100%">
+      <div class="player-hdr">
+        <span class="link" data-click="openLibrary">← Library</span><span class="muted">/</span><span style="font:600 12px Sora,sans-serif;color:#a9b2cc">Live match</span>
+      </div>
+      <div class="empty" style="margin:auto">No match in progress right now.<br>This page opens automatically when a match is found.</div>
+    </div>`;
+  }
+  const opponent = m.opponent;
+  const striking = rec.phase === 'striking';
+  const past = s.matches.filter(x => x.id !== m.id && x.opponent.toLowerCase() === opponent.toLowerCase());
+  const finished = past.filter(x => x.result);
+  const wins = finished.filter(x => x.result === 'W').length;
+  const losses = finished.filter(x => x.result === 'L').length;
+  const habits = [];
+  past.forEach(x => x.notes.forEach(n => { if ((n.tags || []).includes('habit')) habits.push(n); }));
+  const plan = s.gamePlans[opponent.toLowerCase()] || '';
+
+  return `
+  <div class="main" style="width:100%">
+    <div class="player-hdr">
+      <span class="link" data-click="openLibrary">← Library</span><span class="muted">/</span><span style="font:600 12px Sora,sans-serif;color:#a9b2cc">Live match</span>
+      <span style="margin-left:auto" class="row">
+        ${striking
+          ? '<span class="row" style="gap:6px;background:rgba(255,209,102,.12);color:#ffd166;border-radius:6px;padding:4px 10px;font:700 11px Sora,sans-serif"><span class="dot" style="background:#ffd166;box-shadow:0 0 6px #ffd166"></span>STAGE STRIKING · recording starts at game 1</span>'
+          : '<span class="row" style="gap:10px"><span class="row" style="gap:6px;background:rgba(255,77,148,.14);color:#ff9dc4;border-radius:6px;padding:4px 10px;font:700 11px Sora,sans-serif"><span class="dot" style="background:#ff4d94;box-shadow:0 0 6px #ff4d94"></span>RECORDING</span><span class="btn danger" data-click="stopRecording">■ Stop</span></span>'}
+      </span>
+    </div>
+    <div class="player-who">
+      <div class="avatar">${initial(opponent)}</div>
+      <div class="col" style="gap:3px">
+        <div style="font:800 19px Sora,sans-serif">vs ${esc(opponent)}</div>
+        <div class="muted" style="font-size:11px">${past.length === 0 ? 'first recorded match against this player' : `${past.length} recorded match${past.length === 1 ? '' : 'es'} before this one`}</div>
+      </div>
+      <div class="row" style="margin-left:auto;gap:10px">
+        <div class="stat-box"><div class="stat-num" style="color:${losses > wins ? '#ff8f8f' : '#7fe8ad'}">${wins}–${losses}</div><div class="stat-lbl">sets vs you</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:#45c4ff">${m.notes.length}</div><div class="stat-lbl">notes this match</div></div>
+      </div>
+    </div>
+    <div class="body">
+      <div class="notes-col">
+        <div class="row" style="gap:8px"><span class="slabel">MATCH NOTES</span><span class="muted" style="font-size:10.5px">${striking ? 'jotted now, timestamped 0:00' : 'times are into the recording'}</span></div>
+        ${m.notes.length === 0 ? '<div class="empty">Nothing yet — what do you notice?</div>' : m.notes.map(n => noteRow(n)).join('')}
+        ${composer(m)}
+      </div>
+      <div class="side-col">
+        <div class="col" style="gap:8px">
+          <div class="slabel" style="color:#ff9dc4;font-size:10px">THEIR HABITS</div>
+          ${habits.length === 0 ? '<div class="muted" style="font-size:11px">No #habit notes from earlier matches yet.</div>' :
+            habits.slice(0, 6).map(h => `<div class="habit-line">${esc(h.text)}</div>`).join('')}
+        </div>
+        <div class="col" style="gap:6px">
+          <div class="slabel" style="color:#7fe8ad;font-size:10px">GAME PLAN</div>
+          <textarea id="gamePlanInput" rows="4" placeholder="Game plan for ${esc(opponent)}…" data-blur="saveGamePlan">${esc(plan)}</textarea>
+        </div>
+        <div class="col" style="gap:6px;margin-top:auto">
+          <div class="slabel" style="font-size:10px">PAST SETS</div>
+          ${finished.length === 0 ? '<div class="muted" style="font-size:10.5px">No finished sets recorded yet.</div>' :
+            finished.slice(0, 5).map(x => `<div class="row" style="justify-content:space-between;font:400 10.5px Sora,sans-serif;color:#a9b2cc"><span>${fmtDate(x.startedAt)}</span><span style="color:${x.result === 'W' ? '#3ddc84' : '#ff6d6d'};font-weight:700">${x.result} ${x.gamesWon}–${x.gamesLost}</span></div>`).join('')}
+          ${past.length ? `<span class="link" style="font-size:10px" data-click="openPlayer" data-arg="${esc(opponent)}">full player page →</span>` : ''}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
 // ================= SETTINGS (turn 2c) =================
 
 function renderSettings(s) {
@@ -488,6 +562,7 @@ function renderSettings(s) {
 const handlers = {
   selectMatch(el, id) { ui.selectedMatchId = id; render(); },
   openPlayer(el, opponent) { post({ action: 'navigate', page: 'player', opponent }); },
+  openLive() { post({ action: 'navigate', page: 'live' }); },
   openLibrary() { post({ action: 'navigate', page: 'library' }); },
   openSettings() { post({ action: 'navigate', page: 'settings' }); },
   stopRecording() { post({ action: 'stopRecording' }); },
@@ -506,8 +581,11 @@ const handlers = {
   addNote() {
     const input = document.getElementById('noteInput');
     if (!input || !input.value.trim()) return;
-    const m = pickSelectedMatch(S.data);
-    post({ action: 'addNote', matchId: m.id, text: input.value, tags: [...ui.activeTags] });
+    const id = S.data.page === 'live'
+      ? S.data.recording.currentMatchRecordId
+      : pickSelectedMatch(S.data)?.id;
+    if (!id) return;
+    post({ action: 'addNote', matchId: id, text: input.value, tags: [...ui.activeTags] });
     ui.activeTags = [];
   },
   editFocus() {
@@ -532,7 +610,8 @@ const handlers = {
     });
   },
   saveGamePlan(el) {
-    post({ action: 'setGamePlan', opponent: S.data.playerName, text: el.value });
+    const opponent = S.data.page === 'live' ? S.data.recording.opponent : S.data.playerName;
+    if (opponent) post({ action: 'setGamePlan', opponent, text: el.value });
   },
   saveSettings() {
     post({

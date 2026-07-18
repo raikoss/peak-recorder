@@ -20,6 +20,7 @@ internal sealed class MainWindow : Form
 
     private string _page = "library";
     private string? _playerName;
+    private string? _lastPhase;
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -92,6 +93,14 @@ internal sealed class MainWindow : Form
     private void PushState()
     {
         if (_web.CoreWebView2 == null) return;
+
+        // Auto-switch on phase transitions only, so the user can still browse
+        // other pages mid-match; the window itself is never opened or focused.
+        var phase = _recorder.Phase;
+        if (phase != null && _lastPhase == null) _page = "live";
+        else if (phase == null && _lastPhase != null && _page == "live") _page = "library";
+        _lastPhase = phase;
+
         var snapshot = _store.Snapshot();
         var payload = new
         {
@@ -103,6 +112,7 @@ internal sealed class MainWindow : Form
             recording = new
             {
                 isRecording = _recorder.IsRecording,
+                phase,
                 opponent = _recorder.Opponent,
                 matchId = _recorder.MatchId,
                 currentMatchRecordId = _recorder.CurrentMatchRecordId,
