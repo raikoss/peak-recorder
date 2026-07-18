@@ -167,9 +167,16 @@ internal sealed class MainWindow : Form
                     break;
 
                 case "addNote":
+                    var noteMatchId = msg!["matchId"]!.GetValue<string>();
+                    // Notes on the live match are stamped with the recording
+                    // clock (0:00 during striking); notes on past matches are
+                    // general VOD-review notes, stored with -1 = no timestamp.
+                    var timestamp = noteMatchId == _recorder.CurrentMatchRecordId
+                        ? _recorder.RecordingElapsedSeconds
+                        : -1;
                     _store.AddNote(
-                        msg!["matchId"]!.GetValue<string>(),
-                        _recorder.RecordingElapsedSeconds,
+                        noteMatchId,
+                        timestamp,
                         msg["text"]!.GetValue<string>(),
                         msg["tags"]?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? []);
                     break;

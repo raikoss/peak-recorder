@@ -307,7 +307,7 @@ function matchDetail(m, s) {
     <div class="notes-col">
       <div class="row" style="gap:8px"><span class="slabel">NOTES</span><span class="muted" style="font-size:10.5px">times are into the recording</span></div>
       ${m.notes.length === 0 ? '<div class="empty">No notes yet.</div>' : m.notes.map(n => noteRow(n)).join('')}
-      ${live ? composer(m) : ''}
+      ${composer(m, live)}
     </div>
     <div class="side-col">${scoutingPanel(m.opponent, s)}</div>
   </div>`;
@@ -315,20 +315,23 @@ function matchDetail(m, s) {
 
 function noteRow(n) {
   const tags = (n.tags || []).map(tagChip).join(' ');
-  return `<div class="note"><span class="note-ts" title="click to copy">${fmtTime(n.timestampSeconds)}</span><div class="note-body">${esc(n.text)} ${tags}</div></div>`;
+  const ts = n.timestampSeconds >= 0
+    ? `<span class="note-ts" title="click to copy">${fmtTime(n.timestampSeconds)}</span>`
+    : `<span class="note-ts" style="background:rgba(255,255,255,.06);color:#6d7694" title="added after the match">vod</span>`;
+  return `<div class="note">${ts}<div class="note-body">${esc(n.text)} ${tags}</div></div>`;
 }
 function tagChip(t) {
   const cls = { habit: 'habit', adapt: 'adapt', 'work-on': 'workon', tech: 'tech' }[t] || 'habit';
   return `<span class="chip ${cls}">#${t}</span>`;
 }
 
-function composer(m) {
+function composer(m, live = true) {
   const tags = ['habit', 'adapt', 'work-on', 'tech'];
   return `
   <div class="composer">
-    <div class="composer-row">
-      <span class="note-ts">now</span>
-      <input id="noteInput" type="text" placeholder="What just happened…" data-enter="addNote">
+    <div class="composer-row" ${live ? '' : 'style="border-color:rgba(255,255,255,.14)"'}>
+      <span class="note-ts" ${live ? '' : 'style="background:rgba(255,255,255,.06);color:#6d7694"'}>${live ? 'now' : 'vod'}</span>
+      <input id="noteInput" type="text" placeholder="${live ? 'What just happened…' : 'Review note — no timestamp, just tied to this match…'}" data-enter="addNote">
       <div class="btn primary" data-click="addNote">Add</div>
     </div>
     <div class="quicktags">
