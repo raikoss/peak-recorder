@@ -143,6 +143,9 @@ internal sealed class MainWindow : Form
                 opponent = _recorder.Opponent,
                 matchId = _recorder.MatchId,
                 currentMatchRecordId = _recorder.CurrentMatchRecordId,
+                gamesWon = _recorder.GamesWon,
+                gamesLost = _recorder.GamesLost,
+                currentGame = _recorder.CurrentGameNumber,
             },
             config = new
             {
@@ -205,6 +208,7 @@ internal sealed class MainWindow : Form
                     _store.AddNote(
                         noteMatchId,
                         timestamp,
+                        msg["gameNumber"]?.GetValue<int>(),
                         msg["text"]!.GetValue<string>(),
                         msg["tags"]?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? []);
                     break;
@@ -213,7 +217,8 @@ internal sealed class MainWindow : Form
                     _store.UpdateNote(
                         msg!["noteId"]!.GetValue<long>(),
                         msg["text"]!.GetValue<string>(),
-                        msg["tags"]?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? []);
+                        msg["tags"]?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? [],
+                        msg["gameNumber"]?.GetValue<int>());
                     break;
 
                 case "deleteNote":

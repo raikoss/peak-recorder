@@ -7,6 +7,16 @@ namespace PeakRecorder;
 /// as parsed from the match page by the extension.</summary>
 public sealed record MatchResultInfo(string Result, int GamesWon, int GamesLost);
 
+/// <summary>Auto-detected stage / character picks and live game progress
+/// reported by the extension as the match progresses; any field may be
+/// null (= no news).</summary>
+public sealed record GameInfo(string? Stage, string? MyCharacter, string? OpponentCharacter,
+    int? GamesWon = null, int? GamesLost = null, bool? GameInProgress = null)
+{
+    public bool IsEmpty => Stage == null && MyCharacter == null && OpponentCharacter == null
+        && GamesWon == null && GamesLost == null && GameInProgress == null;
+}
+
 /// <summary>
 /// Orchestrates the whole flow: ensure OBS is running, connect to
 /// obs-websocket, start/stop recording, rename the output file.
@@ -31,6 +41,25 @@ public sealed class RecorderService : IDisposable
     /// while OBS is rolling, null when idle.</summary>
     public string? Phase => IsRecording ? "recording" : CurrentMatchRecordId != null ? "striking" : null;
 
+    /// <summary>Live score of the current set (completed games only).</summary>
+    public int GamesWon { get; private set; }
+    public int GamesLost { get; private set; }
+
+    /// <summary>Whether a game is running right now (stage locked in), as
+    /// opposed to the between-games pick/ban phase.</summary>
+    public bool GameInProgress { get; private set; }
+
+    /// <summary>Game a note jotted right now belongs to by default: the game
+    /// being played, or — between games — the one that just finished.</summary>
+    public int CurrentGameNumber
+    {
+        get
+        {
+            var completed = GamesWon + GamesLost;
+            return GameInProgress ? completed + 1 : Math.Max(completed, 1);
+        }
+    }
+
     private DateTime _recordingStartedAt;
 
     public event Action? StateChanged;
@@ -49,13 +78,16 @@ public sealed class RecorderService : IDisposable
         _store = store;
     }
 
-    public async Task HandleEventAsync(string type, string? matchId, string? opponent, string[]? players, MatchResultInfo? result = null)
+    public async Task HandleEventAsync(string type, string? matchId, string? opponent, string[]? players,
+        MatchResultInfo? result = null, GameInfo? info = null)
     {
         await _gate.WaitAsync();
         try
         {
             Log.Write($"Event: {type} matchId={matchId} opponent={opponent ?? "?"} players=[{string.Join(", ", players ?? [])}]" +
-                      (result != null ? $" result={result.Result} {result.GamesWon}-{result.GamesLost}" : ""));
+                      (result != null ? $" result={result.Result} {result.GamesWon}-{result.GamesLost}" : "") +
+                      (info is { IsEmpty: false } ? $" stage={info.Stage ?? "-"} chars={info.MyCharacter ?? "-"}/{info.OpponentCharacter ?? "-"}" +
+                          (info.GamesWon != null || info.GameInProgress != null ? $" score={info.GamesWon}-{info.GamesLost} inGame={info.GameInProgress}" : "") : ""));
             switch (type)
             {
                 case "match_started":
@@ -75,7 +107,10 @@ public sealed class RecorderService : IDisposable
                 case "match_found":
                     UpdateOpponent(matchId, opponent, players);
                     if (!IsRecording && CurrentMatchRecordId == null && !string.IsNullOrWhiteSpace(Opponent))
+                    {
+                        ResetGameProgress();
                         CurrentMatchRecordId = _store.StartMatch(MatchId ?? "", Opponent!).Id;
+                    }
                     if (!string.IsNullOrWhiteSpace(Opponent)) MatchFound?.Invoke(Opponent);
                     break;
 
@@ -84,6 +119,7 @@ public sealed class RecorderService : IDisposable
                     {
                         _store.DeleteMatchIfEmpty(CurrentMatchRecordId);
                         CurrentMatchRecordId = null;
+                        ResetGameProgress();
                     }
                     MatchId = null;
                     Opponent = null;
@@ -106,6 +142,17 @@ public sealed class RecorderService : IDisposable
                 default:
                     Log.Write($"Unknown event type '{type}' ignored.");
                     break;
+            }
+
+            // Stage/character news can ride on any event; the record exists
+            // from match_found on, so this covers striking picks too.
+            if (info is { IsEmpty: false } && CurrentMatchRecordId != null)
+                _store.ApplyGameInfo(CurrentMatchRecordId, info.Stage, info.MyCharacter, info.OpponentCharacter);
+            if (info != null && CurrentMatchRecordId != null)
+            {
+                if (info.GamesWon is { } gw) GamesWon = gw;
+                if (info.GamesLost is { } gl) GamesLost = gl;
+                if (info.GameInProgress is { } gip) GameInProgress = gip;
             }
         }
         catch (Exception ex)
@@ -144,7 +191,11 @@ public sealed class RecorderService : IDisposable
         IsRecording = true;
         _recordingStartedAt = DateTime.Now;
         // A record may already exist from the match_found (striking) phase.
-        CurrentMatchRecordId ??= _store.StartMatch(MatchId ?? "", Opponent ?? "unknown").Id;
+        if (CurrentMatchRecordId == null)
+        {
+            ResetGameProgress();
+            CurrentMatchRecordId = _store.StartMatch(MatchId ?? "", Opponent ?? "unknown").Id;
+        }
         Log.Write($"Recording started (opponent: {Opponent ?? "unknown"}).");
     }
 
@@ -189,6 +240,14 @@ public sealed class RecorderService : IDisposable
         CurrentMatchRecordId = null;
         Opponent = null;
         MatchId = null;
+        ResetGameProgress();
+    }
+
+    private void ResetGameProgress()
+    {
+        GamesWon = 0;
+        GamesLost = 0;
+        GameInProgress = false;
     }
 
     private async Task EnsureObsConnectedAsync()

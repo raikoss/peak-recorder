@@ -89,13 +89,24 @@ public sealed class BridgeServer : IDisposable
                             body["gamesWon"]?.GetValue<int>() ?? 0,
                             body["gamesLost"]?.GetValue<int>() ?? 0)
                         : null;
+                    // gamesWon/gamesLost double as the final tally on a result
+                    // event and the live score mid-set; only the latter feeds
+                    // GameInfo so the two never fight over the same fields.
+                    var gameInfo = new GameInfo(
+                        body["stage"]?.GetValue<string>(),
+                        body["myCharacter"]?.GetValue<string>(),
+                        body["opponentCharacter"]?.GetValue<string>(),
+                        matchResult == null ? body["gamesWon"]?.GetValue<int>() : null,
+                        matchResult == null ? body["gamesLost"]?.GetValue<int>() : null,
+                        body["gameInProgress"]?.GetValue<bool>());
                     // Fire-and-forget so slow OBS startup doesn't stall the extension.
                     _ = _recorder.HandleEventAsync(
                         type,
                         body["matchId"]?.GetValue<string>(),
                         body["opponent"]?.GetValue<string>(),
                         players,
-                        matchResult);
+                        matchResult,
+                        gameInfo.IsEmpty ? null : gameInfo);
                     await WriteJsonAsync(res, new { accepted = true });
                 }
             }

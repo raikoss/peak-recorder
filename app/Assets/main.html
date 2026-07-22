@@ -72,7 +72,10 @@ textarea{resize:vertical;font-family:Sora,sans-serif}
 .note-actions span:hover{color:#e8ebf5}
 .note-actions span.danger:hover{color:#ff8f8f}
 .note-ts{font:700 11px ui-monospace,Consolas,monospace;color:#45c4ff;background:rgba(69,196,255,.12);border-radius:5px;padding:2px 7px;height:fit-content;flex:none;cursor:pointer}
+.note-time{font:400 10px ui-monospace,Consolas,monospace;color:#6d7694;margin-left:6px}
+.note-group{font:700 9.5px Sora,sans-serif;letter-spacing:.12em;color:#6d7694;margin-top:4px}
 .note-body{font:400 12px/1.5 Sora,sans-serif;color:#d4daea;flex:1}
+.chip.game{background:rgba(69,196,255,.12);color:#45c4ff}
 .composer{margin-top:auto;display:flex;flex-direction:column;gap:7px}
 .composer-row{display:flex;gap:8px;align-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(69,196,255,.35);border-radius:10px;padding:9px 12px}
 .composer-row input{flex:1;background:transparent;border:none}
@@ -223,7 +226,8 @@ function wireCommon() {
   if (filterEl) filterEl.addEventListener('input', () => { ui.filter = filterEl.value; render(); });
 }
 
-const ui = { filter: '', selectedMatchId: null, activeTags: [], editingNoteId: null, editingTags: [] };
+const ui = { filter: '', selectedMatchId: null, activeTags: [], editingNoteId: null, editingTags: [],
+  composerGame: null, editingGame: null }; // composerGame null = auto (live) / whole-match (vod)
 
 // ================= LIBRARY (turn 2a) =================
 
@@ -310,8 +314,8 @@ function matchDetail(m, s) {
   </div>
   <div class="body">
     <div class="notes-col">
-      <div class="row" style="gap:8px"><span class="slabel">NOTES</span><span class="muted" style="font-size:10.5px">times are into the recording</span></div>
-      ${m.notes.length === 0 ? '<div class="empty">No notes yet.</div>' : m.notes.map(n => noteRow(n)).join('')}
+      <div class="row" style="gap:8px"><span class="slabel">NOTES</span><span class="muted" style="font-size:10.5px">by game of the set</span></div>
+      ${m.notes.length === 0 ? '<div class="empty">No notes yet.</div>' : notesList(m)}
       ${composer(m, live)}
     </div>
     <div class="side-col">${scoutingPanel(m.opponent, s)}</div>
@@ -321,14 +325,36 @@ function matchDetail(m, s) {
 function noteRow(n) {
   if (ui.editingNoteId === n.id) return noteEditor(n);
   const tags = (n.tags || []).map(tagChip).join(' ');
-  const ts = n.timestampSeconds >= 0
-    ? `<span class="note-ts" title="click to copy">${fmtTime(n.timestampSeconds)}</span>`
-    : `<span class="note-ts" style="background:rgba(255,255,255,.06);color:#6d7694" title="added after the match">vod</span>`;
-  return `<div class="note">${ts}<div class="note-body">${esc(n.text)} ${tags}</div>
+  const time = n.timestampSeconds > 0 ? `<span class="note-time" title="into the recording">${fmtTime(n.timestampSeconds)}</span>` : '';
+  const ts = n.gameNumber
+    ? `<span class="note-ts">G${n.gameNumber}</span>`
+    : n.timestampSeconds >= 0
+      ? `<span class="note-ts" title="click to copy">${fmtTime(n.timestampSeconds)}</span>`
+      : `<span class="note-ts" style="background:rgba(255,255,255,.06);color:#6d7694" title="added after the match">vod</span>`;
+  return `<div class="note">${ts}<div class="note-body">${esc(n.text)} ${tags}${n.gameNumber ? time : ''}</div>
     <div class="note-actions">
       <span title="edit note" data-click="editNote" data-arg="${n.id}">✎</span>
       <span class="danger" title="delete note" data-click="deleteNote" data-arg="${n.id}">✕</span>
     </div></div>`;
+}
+
+// Notes come out of the store in creation order, so a set reads game by game;
+// insert a small header whenever the game a note belongs to changes.
+function notesList(m) {
+  if (m.notes.length === 0) return '';
+  if (!m.notes.some(n => n.gameNumber)) return m.notes.map(n => noteRow(n)).join('');
+  let html = '';
+  let last;
+  for (const n of m.notes) {
+    const g = n.gameNumber || null;
+    if (g !== last) {
+      const stage = g ? (m.stages || [])[g - 1] : null;
+      html += `<div class="note-group">${g ? `GAME ${g}${stage ? ' · ' + esc(stage.toUpperCase()) : ''}` : 'WHOLE MATCH'}</div>`;
+      last = g;
+    }
+    html += noteRow(n);
+  }
+  return html;
 }
 
 const TAG_CLASSES = { habit: 'habit', adapt: 'adapt', 'work-on': 'workon', tech: 'tech' };
@@ -342,7 +368,9 @@ function noteEditor(n) {
       <div class="btn" data-click="cancelNoteEdit">Cancel</div>
     </div>
     <div class="quicktags">
-      <span class="muted" style="font-size:10px">tags:</span>
+      <span class="muted" style="font-size:10px">game:</span>
+      ${[1, 2, 3, 4, 5].map(g => `<span class="chip game ${ui.editingGame === g ? 'active' : ''}" data-click="pickEditGame" data-arg="${g}">G${g}</span>`).join('')}
+      <span class="muted" style="font-size:10px;margin-left:8px">tags:</span>
       ${Object.keys(TAG_CLASSES).map(t => `<span class="chip ${TAG_CLASSES[t]} ${ui.editingTags.includes(t) ? 'active' : ''}" data-click="toggleEditTag" data-arg="${t}">#${t}</span>`).join('')}
     </div>
   </div>`;
@@ -352,17 +380,36 @@ function tagChip(t) {
   return `<span class="chip ${cls}">#${t}</span>`;
 }
 
+// Which game a note added right now would land on: an explicit pick beats
+// the live default (the game being played / just finished); on a past match
+// no pick means a whole-match note.
+function composerGameFor(live) {
+  return ui.composerGame ?? (live ? (S.data.recording.currentGame || 1) : null);
+}
+
+function gameChips(m, live, selected, action) {
+  const played = (m ? (m.gamesWon || 0) + (m.gamesLost || 0) : 0);
+  const count = Math.min(5, Math.max(3, played, live ? (S.data.recording.currentGame || 1) : 0, selected || 0));
+  return Array.from({ length: count }, (_, i) => i + 1)
+    .map(g => `<span class="chip game ${selected === g ? 'active' : ''}" data-click="${action}" data-arg="${g}">G${g}</span>`)
+    .join('');
+}
+
 function composer(m, live = true) {
   const tags = ['habit', 'adapt', 'work-on', 'tech'];
+  const game = composerGameFor(live);
   return `
   <div class="composer">
     <div class="composer-row" ${live ? '' : 'style="border-color:rgba(255,255,255,.14)"'}>
-      <span class="note-ts" ${live ? '' : 'style="background:rgba(255,255,255,.06);color:#6d7694"'}>${live ? 'now' : 'vod'}</span>
-      <input id="noteInput" type="text" placeholder="${live ? 'What just happened…' : 'Review note — no timestamp, just tied to this match…'}" data-enter="addNote">
+      <span class="note-ts" ${game || live ? '' : 'style="background:rgba(255,255,255,.06);color:#6d7694"'}>${game ? 'G' + game : 'match'}</span>
+      <input id="noteInput" type="text" placeholder="${live ? 'What just happened…' : 'Review note — pick a game below, or leave it on the whole match…'}" data-enter="addNote">
       <div class="btn primary" data-click="addNote">Add</div>
     </div>
     <div class="quicktags">
-      <span class="muted" style="font-size:10px">quick-tag:</span>
+      <span class="muted" style="font-size:10px">game:</span>
+      ${gameChips(m, live, game, 'pickComposerGame')}
+      ${live ? '' : '<span class="muted" style="font-size:9.5px">(click again for whole match)</span>'}
+      <span class="muted" style="font-size:10px;margin-left:8px">quick-tag:</span>
       ${tags.map(t => `<span class="chip ${TAG_CLASSES[t]} ${ui.activeTags.includes(t) ? 'active' : ''}" data-click="toggleTag" data-arg="${t}">#${t}</span>`).join('')}
     </div>
   </div>`;
@@ -516,8 +563,8 @@ function renderLive(s) {
 
   const notesCol = `
     <div class="notes-col" style="${overlay ? 'padding:10px 14px 12px' : ''}">
-      <div class="row" style="gap:8px"><span class="slabel">MATCH NOTES</span><span class="muted" style="font-size:10.5px">${striking ? 'jotted now, timestamped 0:00' : 'times are into the recording'}</span></div>
-      ${m.notes.length === 0 ? '<div class="empty">Nothing yet — what do you notice?</div>' : m.notes.map(n => noteRow(n)).join('')}
+      <div class="row" style="gap:8px"><span class="slabel">MATCH NOTES</span><span class="muted" style="font-size:10.5px">${striking ? 'notes attach to game 1' : `notes attach to game ${rec.currentGame || 1}`}</span></div>
+      ${m.notes.length === 0 ? '<div class="empty">Nothing yet — what do you notice?</div>' : notesList(m)}
       ${composer(m)}
     </div>`;
 
@@ -533,8 +580,15 @@ function renderLive(s) {
       <div class="col" style="gap:3px">
         <div style="font:800 ${overlay ? '15px' : '19px'} Sora,sans-serif">vs ${overlay ? esc(opponent) : `<span class="link" style="color:inherit" title="open player page" data-click="openPlayer" data-arg="${esc(opponent)}">${esc(opponent)} <span style="color:#45c4ff;font-size:12px">↗</span></span>`}</div>
         <div class="muted" style="font-size:${overlay ? '10px' : '11px'}">${past.length === 0 ? 'first recorded match against this player' : `${past.length} recorded match${past.length === 1 ? '' : 'es'} before this one`}</div>
+        ${m.myCharacter || m.opponentCharacter || (m.stages || []).length ? `
+        <div class="row" style="gap:5px;flex-wrap:wrap;margin-top:2px">
+          ${m.myCharacter ? `<span class="chip" style="background:rgba(255,77,148,.14);color:#ff9dc4">${esc(m.myCharacter)}</span>` : ''}
+          ${m.opponentCharacter ? `<span class="chip" style="background:rgba(139,108,255,.16);color:#c3b3ff">${esc(m.opponentCharacter)}</span>` : ''}
+          ${(m.stages || []).map(st => `<span class="chip" style="background:rgba(255,255,255,.07);color:#a9b2cc">${esc(st)}</span>`).join('')}
+        </div>` : ''}
       </div>
       <div class="row" style="margin-left:auto;gap:${overlay ? '7px' : '10px'}">
+        ${striking ? '' : `<div class="stat-box"><div class="stat-num" style="color:${rec.gamesLost > rec.gamesWon ? '#ff8f8f' : '#7fe8ad'}">${rec.gamesWon || 0}–${rec.gamesLost || 0}</div><div class="stat-lbl">this set</div></div>`}
         <div class="stat-box"><div class="stat-num" style="color:${losses > wins ? '#ff8f8f' : '#7fe8ad'}">${wins}–${losses}</div><div class="stat-lbl">sets vs you</div></div>
         <div class="stat-box"><div class="stat-num" style="color:#45c4ff">${m.notes.length}</div><div class="stat-lbl">notes</div></div>
       </div>
@@ -601,7 +655,7 @@ function renderSettings(s) {
 // ================= handlers =================
 
 const handlers = {
-  selectMatch(el, id) { ui.selectedMatchId = id; render(); },
+  selectMatch(el, id) { ui.selectedMatchId = id; ui.composerGame = null; render(); },
   openPlayer(el, opponent) { post({ action: 'navigate', page: 'player', opponent }); },
   openLive() { post({ action: 'navigate', page: 'live' }); },
   openLibrary() { post({ action: 'navigate', page: 'library' }); },
@@ -626,14 +680,30 @@ const handlers = {
       ? S.data.recording.currentMatchRecordId
       : pickSelectedMatch(S.data)?.id;
     if (!id) return;
-    post({ action: 'addNote', matchId: id, text: input.value, tags: [...ui.activeTags] });
+    // Same "live" the composer was rendered with, so the saved game matches
+    // the badge that was showing when the note was typed.
+    const live = S.data.page === 'live'
+      || (S.data.recording.isRecording && id === S.data.recording.currentMatchRecordId);
+    post({ action: 'addNote', matchId: id, text: input.value, tags: [...ui.activeTags], gameNumber: composerGameFor(live) });
     ui.activeTags = [];
+    ui.composerGame = null;
+  },
+  pickComposerGame(el, g) {
+    g = Number(g);
+    ui.composerGame = ui.composerGame === g ? null : g;
+    render();
+  },
+  pickEditGame(el, g) {
+    g = Number(g);
+    ui.editingGame = ui.editingGame === g ? null : g;
+    render();
   },
   editNote(el, id) {
     const n = S.data.matches.flatMap(m => m.notes).find(x => x.id === Number(id));
     if (!n) return;
     ui.editingNoteId = n.id;
     ui.editingTags = [...(n.tags || [])];
+    ui.editingGame = n.gameNumber || null;
     render();
   },
   toggleEditTag(el, tag) {
@@ -644,13 +714,15 @@ const handlers = {
   saveNoteEdit() {
     const input = document.getElementById('noteEditInput');
     if (!input || !input.value.trim() || ui.editingNoteId == null) return;
-    post({ action: 'updateNote', noteId: ui.editingNoteId, text: input.value, tags: [...ui.editingTags] });
+    post({ action: 'updateNote', noteId: ui.editingNoteId, text: input.value, tags: [...ui.editingTags], gameNumber: ui.editingGame });
     ui.editingNoteId = null;
     ui.editingTags = [];
+    ui.editingGame = null;
   },
   cancelNoteEdit() {
     ui.editingNoteId = null;
     ui.editingTags = [];
+    ui.editingGame = null;
     render();
   },
   deleteNote(el, id) {

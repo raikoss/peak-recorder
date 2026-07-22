@@ -39,6 +39,7 @@ internal sealed class TrayAppContext : ApplicationContext
     private readonly ToolStripMenuItem _statusItem;
     private Form? _briefing;
     private MainWindow? _mainWindow;
+    private bool _wasRecording;
 
     // Recorder events arrive on thread-pool threads, but everything UI
     // (NotifyIcon, briefing windows, WebView2) must run on the main STA
@@ -92,11 +93,15 @@ internal sealed class TrayAppContext : ApplicationContext
             _tray.Text = ("PeakRecorder — " + text) is { Length: > 63 } t ? t[..63] : "PeakRecorder — " + text;
             if (_recorder.IsRecording)
             {
-                _tray.ShowBalloonTip(2000, "PeakRecorder", text, ToolTipIcon.Info);
+                // StateChanged fires on every mid-set event too (stage/char
+                // picks, score updates), not just start/stop — only toast on
+                // the false->true edge so later games don't re-notify.
+                if (!_wasRecording) _tray.ShowBalloonTip(2000, "PeakRecorder", text, ToolTipIcon.Info);
                 // The full-window briefing hides at game start; the live
                 // overlay stays up so notes can be jotted during the set.
                 if (_briefing is BriefingWindow) CloseBriefing();
             }
+            _wasRecording = _recorder.IsRecording;
             if (_recorder.Phase == null) CloseBriefing(); // match over
         });
 

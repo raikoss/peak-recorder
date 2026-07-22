@@ -8,6 +8,9 @@ public sealed class Note
     /// <summary>SQLite rowid; 0 until the note has been written and re-read.</summary>
     public long Id { get; set; }
     public int TimestampSeconds { get; set; }
+    /// <summary>1-based game of the set this note is about; null = general
+    /// note on the whole match.</summary>
+    public int? GameNumber { get; set; }
     public string Text { get; set; } = "";
     public List<string> Tags { get; set; } = [];
     public DateTime CreatedAt { get; set; } = DateTime.Now;
@@ -101,6 +104,7 @@ public sealed class Store
                 id                INTEGER PRIMARY KEY AUTOINCREMENT,
                 match_record_id   TEXT NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
                 timestamp_seconds INTEGER NOT NULL,
+                game_number       INTEGER,
                 text              TEXT NOT NULL,
                 tags              TEXT NOT NULL DEFAULT '[]',
                 created_at        TEXT NOT NULL
@@ -116,6 +120,16 @@ public sealed class Store
             );
             """;
         cmd.ExecuteNonQuery();
+
+        // Databases from before per-game notes lack the column; add it in place.
+        using var probe = conn.CreateCommand();
+        probe.CommandText = "SELECT COUNT(*) FROM pragma_table_info('notes') WHERE name = 'game_number'";
+        if (Convert.ToInt64(probe.ExecuteScalar()) == 0)
+        {
+            using var alter = conn.CreateCommand();
+            alter.CommandText = "ALTER TABLE notes ADD COLUMN game_number INTEGER";
+            alter.ExecuteNonQuery();
+        }
     }
 
     /// <summary>One-time import of the pre-SQLite data.json. The JSON file is
@@ -214,7 +228,7 @@ public sealed class Store
             using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = """
-                    SELECT match_record_id, timestamp_seconds, text, tags, created_at, id
+                    SELECT match_record_id, timestamp_seconds, text, tags, created_at, id, game_number
                     FROM notes ORDER BY id
                     """;
                 using var r = cmd.ExecuteReader();
@@ -228,6 +242,7 @@ public sealed class Store
                         Tags = ParseStringList(r.GetString(3)),
                         CreatedAt = ParseDate(r.GetString(4)),
                         Id = r.GetInt64(5),
+                        GameNumber = r.IsDBNull(6) ? null : r.GetInt32(6),
                     });
                 }
             }
@@ -256,11 +271,11 @@ public sealed class Store
         });
     }
 
-    public void AddNote(string matchRecordId, int timestampSeconds, string text, List<string> tags)
+    public void AddNote(string matchRecordId, int timestampSeconds, int? gameNumber, string text, List<string> tags)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
         Mutate(conn => InsertNote(conn, matchRecordId,
-            new Note { TimestampSeconds = timestampSeconds, Text = text.Trim(), Tags = tags }));
+            new Note { TimestampSeconds = timestampSeconds, GameNumber = gameNumber, Text = text.Trim(), Tags = tags }));
     }
 
     public void UpdateMatchMeta(string matchRecordId, string? result, int gamesWon, int gamesLost,
@@ -285,15 +300,50 @@ public sealed class Store
         });
     }
 
-    public void UpdateNote(long noteId, string text, List<string> tags)
+    /// <summary>Auto-detected stage/character picks from the extension. The
+    /// stage is appended to the per-game list (skipping consecutive repeats,
+    /// which in practice are duplicate reports); characters are overwritten
+    /// with the latest pick, null = keep what's there.</summary>
+    public void ApplyGameInfo(string matchRecordId, string? stage, string? myCharacter, string? opponentCharacter)
+    {
+        if (stage == null && myCharacter == null && opponentCharacter == null) return;
+        Mutate(conn =>
+        {
+            List<string>? stages = null;
+            if (stage != null)
+            {
+                using var read = conn.CreateCommand();
+                read.CommandText = "SELECT stages FROM matches WHERE id = $id";
+                read.Parameters.AddWithValue("$id", matchRecordId);
+                stages = ParseStringList(read.ExecuteScalar() as string ?? "[]");
+                if (stages.Count == 0 || stages[^1] != stage) stages.Add(stage);
+            }
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = """
+                UPDATE matches SET
+                    stages = COALESCE($stages, stages),
+                    my_character = COALESCE($mine, my_character),
+                    opponent_character = COALESCE($theirs, opponent_character)
+                WHERE id = $id
+                """;
+            cmd.Parameters.AddWithValue("$stages", stages != null ? JsonSerializer.Serialize(stages) : DBNull.Value);
+            cmd.Parameters.AddWithValue("$mine", (object?)myCharacter ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$theirs", (object?)opponentCharacter ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$id", matchRecordId);
+            cmd.ExecuteNonQuery();
+        });
+    }
+
+    public void UpdateNote(long noteId, string text, List<string> tags, int? gameNumber)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
         Mutate(conn =>
         {
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = "UPDATE notes SET text = $text, tags = $tags WHERE id = $id";
+            cmd.CommandText = "UPDATE notes SET text = $text, tags = $tags, game_number = $game WHERE id = $id";
             cmd.Parameters.AddWithValue("$text", text.Trim());
             cmd.Parameters.AddWithValue("$tags", JsonSerializer.Serialize(tags));
+            cmd.Parameters.AddWithValue("$game", (object?)gameNumber ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$id", noteId);
             cmd.ExecuteNonQuery();
         });
@@ -386,11 +436,12 @@ public sealed class Store
     {
         using var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO notes (match_record_id, timestamp_seconds, text, tags, created_at)
-            VALUES ($match, $ts, $text, $tags, $created)
+            INSERT INTO notes (match_record_id, timestamp_seconds, game_number, text, tags, created_at)
+            VALUES ($match, $ts, $game, $text, $tags, $created)
             """;
         cmd.Parameters.AddWithValue("$match", matchRecordId);
         cmd.Parameters.AddWithValue("$ts", n.TimestampSeconds);
+        cmd.Parameters.AddWithValue("$game", (object?)n.GameNumber ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$text", n.Text);
         cmd.Parameters.AddWithValue("$tags", JsonSerializer.Serialize(n.Tags));
         cmd.Parameters.AddWithValue("$created", FormatDate(n.CreatedAt));

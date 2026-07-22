@@ -30,6 +30,14 @@
     foundSent: false, // told the app the opponent is known (pre-match briefing)
     startedSent: false, // told the app to start recording
     finishedSent: false,
+    // Last stage / characters reported to the app for this match.
+    lastStage: null,
+    myChar: null,
+    oppChar: null,
+    // Live game score / whether a game is running, as last reported.
+    liveGamesWon: -1,
+    liveGamesLost: -1,
+    liveInProgress: null,
   };
 
   const log = (...args) => state.debug && console.log(TAG, ...args);
@@ -212,14 +220,63 @@
   // "Opponent banning stages..." (dumps 2026-07-10).
   const READY_RE = /^Select the winner/m;
 
+  // Once a game finishes, the page grows a permanent "Match Summary" recap
+  // list with a splash image (stage + characters) for every completed game
+  // — it stays on the page for the rest of the set. Its container is the
+  // element right after the "Match Summary" <h3> (dump 2026-07-07,
+  // match 265360). Exclude it from live pick detection, or game 2+'s
+  // count/ownership never resolves once game 1's recap card appears.
+  function matchSummaryEl(main) {
+    for (const h of main.querySelectorAll("h3")) {
+      if (h.textContent.trim() === "Match Summary") return h.nextElementSibling;
+    }
+    return null;
+  }
+
   // Backup signal: during stage striking the page shows the whole stage grid
-  // (9 splash images); once the stage is locked in, exactly one remains.
-  function stagePicked() {
+  // (9 splash images); once the stage is locked in, exactly one remains —
+  // its alt text is the display name ("Small Battlefield", dump 2026-07-10).
+  function stageInfo() {
     const main = document.querySelector("main") || document.body;
-    const srcs = new Set(
-      [...main.querySelectorAll('img[src*="/images/stages/"]')].map((i) => i.getAttribute("src"))
-    );
-    return srcs.size === 1;
+    const summary = matchSummaryEl(main);
+    const bySrc = new Map();
+    for (const img of main.querySelectorAll('img[src*="/images/stages/"]')) {
+      if (summary && summary.contains(img)) continue;
+      const src = img.getAttribute("src");
+      if (!bySrc.has(src)) bySrc.set(src, (img.getAttribute("alt") || "").trim());
+    }
+    return { count: bySrc.size, name: bySrc.size === 1 ? [...bySrc.values()][0] || null : null };
+  }
+
+  function stagePicked() {
+    return stageInfo().count === 1;
+  }
+
+  // Each score-panel side shows the player's name and their character splash
+  // (img alt = character name) in the same container: walk up from the splash
+  // to the first ancestor whose text names exactly one player, and that
+  // player owns the character (dump 2026-07-10, match 269435).
+  function detectCharacters(players) {
+    const main = document.querySelector("main") || document.body;
+    const summary = matchSummaryEl(main);
+    const byPlayer = new Map();
+    for (const img of main.querySelectorAll('img[src*="/images/characters/splashes/"]')) {
+      if (summary && summary.contains(img)) continue;
+      const alt = (img.getAttribute("alt") || "").trim();
+      if (!alt) continue;
+      let el = img.parentElement;
+      while (el && el !== main.parentElement) {
+        const text = el.innerText || "";
+        const named = players.filter((p) => text.includes(p.name));
+        if (named.length === 1) {
+          if (!byPlayer.has(named[0].id)) byPlayer.set(named[0].id, alt);
+          break;
+        }
+        if (named.length > 1) break;
+        el = el.parentElement;
+      }
+    }
+    return byPlayer;
   }
 
   // ---- state machine ---------------------------------------------------------
@@ -245,6 +302,12 @@
         state.foundSent = false;
         state.startedSent = false;
         state.finishedSent = false;
+        state.lastStage = null;
+        state.myChar = null;
+        state.oppChar = null;
+        state.liveGamesWon = -1;
+        state.liveGamesLost = -1;
+        state.liveInProgress = null;
       }
       return;
     }
@@ -283,6 +346,12 @@
       state.foundSent = false;
       state.startedSent = false;
       state.finishedSent = finished;
+      state.lastStage = null;
+      state.myChar = null;
+      state.oppChar = null;
+      state.liveGamesWon = -1;
+      state.liveGamesLost = -1;
+      state.liveInProgress = null;
       if (finished) log("match page is already finished, not recording");
     }
 
@@ -320,6 +389,51 @@
       state.opponent = opponent;
       send("event", { type: "match_update", matchId: id, opponent });
     }
+
+    // Report the locked stage and both characters as they appear / change, so
+    // the app can attach them to the match record (stage list grows per game).
+    if (iAmPlaying && !state.finishedSent && (state.foundSent || state.startedSent)) {
+      const info = {};
+      const si = stageInfo();
+      if (si.count === 1 && si.name && si.name !== state.lastStage) {
+        info.stage = si.name;
+        state.lastStage = si.name;
+      }
+      const chars = detectCharacters(players);
+      const myChar = myId ? chars.get(myId) || null : null;
+      const oppPlayer = myId ? players.find((p) => p.id !== myId) : null;
+      const oppChar = oppPlayer ? chars.get(oppPlayer.id) || null : null;
+      if (myChar && myChar !== state.myChar) {
+        info.myCharacter = myChar;
+        state.myChar = myChar;
+      }
+      if (oppChar && oppChar !== state.oppChar) {
+        info.opponentCharacter = oppChar;
+        state.oppChar = oppChar;
+      }
+      // Live game score from the server chat ("Server: <name> won Game N")
+      // plus whether a game is currently running, so the app can attach notes
+      // to the right game of the set. Same lines matchResult counts at the end.
+      let gw = 0;
+      let gl = 0;
+      for (const g of text.matchAll(GAME_LINE_RE)) {
+        if (sameName(g[1], state.opponent)) gl++;
+        else gw++;
+      }
+      const inProgress = stage || READY_RE.test(text);
+      if (gw !== state.liveGamesWon || gl !== state.liveGamesLost || inProgress !== state.liveInProgress) {
+        state.liveGamesWon = gw;
+        state.liveGamesLost = gl;
+        state.liveInProgress = inProgress;
+        info.gamesWon = gw;
+        info.gamesLost = gl;
+        info.gameInProgress = inProgress;
+      }
+      if (Object.keys(info).length) {
+        send("event", { type: "match_update", matchId: id, opponent: state.opponent, ...info });
+      }
+    }
+
     if (finished && !state.finishedSent) {
       state.finishedSent = true;
       if (state.startedSent) {
