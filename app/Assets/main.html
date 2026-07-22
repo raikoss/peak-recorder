@@ -366,7 +366,7 @@ function noteRow(n) {
     : n.timestampSeconds >= 0
       ? `<span class="note-ts" title="click to copy">${fmtTime(n.timestampSeconds)}</span>`
       : `<span class="note-ts" style="background:rgba(255,255,255,.06);color:#6d7694" title="added after the match">vod</span>`;
-  return `<div class="note">${ts}<div class="note-body">${esc(n.text)} ${tags}${n.gameNumber ? time : ''}</div>
+  return `<div class="note">${ts}<div class="note-body">${esc(stripInlineTags(n.text))} ${tags}${n.gameNumber ? time : ''}</div>
     <div class="note-actions">
       <span title="edit note" data-click="editNote" data-arg="${n.id}">✎</span>
       <span class="danger" title="delete note" data-click="deleteNote" data-arg="${n.id}">✕</span>
@@ -393,6 +393,24 @@ function notesList(m) {
 }
 
 const TAG_CLASSES = { habit: 'habit', adapt: 'adapt', 'work-on': 'workon', tech: 'tech' };
+
+// Tags written inline in the note text (e.g. "missed tech chase #habit") count
+// as if the matching chip had been clicked, so typing the tag is enough.
+function parseInlineTags(text) {
+  const lower = (text || '').toLowerCase();
+  return Object.keys(TAG_CLASSES).filter(t => lower.includes('#' + t));
+}
+
+// Strips inline "#habit"-style tokens out of the displayed note body — the
+// chip already shows the tag, so the text itself doesn't need to repeat it.
+function stripInlineTags(text) {
+  let out = text || '';
+  Object.keys(TAG_CLASSES).forEach(t => {
+    const re = new RegExp('#' + t.replace('-', '\\-') + '\\b', 'gi');
+    out = out.replace(re, '');
+  });
+  return out.replace(/\s+/g, ' ').trim();
+}
 
 function noteEditor(n) {
   return `
@@ -466,7 +484,7 @@ function scoutingPanel(opponent, s) {
   <div class="col" style="gap:8px">
     <div class="slabel" style="color:#ff9dc4;font-size:10px">HABITS</div>
     ${habits.length === 0 ? '<div class="muted" style="font-size:11px">Tag a note #habit to start building this.</div>' :
-      habits.slice(0, 5).map(h => `<div class="habit-line">${esc(h.text)}</div>`).join('')}
+      habits.slice(0, 5).map(h => `<div class="habit-line">${esc(stripInlineTags(h.text))}</div>`).join('')}
   </div>
   <div class="plan-box">
     <div class="plan-label">GAME PLAN</div>
@@ -522,7 +540,7 @@ function renderPlayer(s) {
       <div class="player-col left">
         <div class="row" style="gap:8px"><span class="slabel" style="color:#ff9dc4">HABITS</span><span class="muted" style="font-size:10px">pinned from #habit notes</span></div>
         ${habits.length === 0 ? '<div class="empty">No habits tagged yet.</div>' :
-          habits.map(h => `<div class="habit-line" style="padding:10px 12px;background:rgba(255,77,148,.07);border:1px solid rgba(255,77,148,.22);border-radius:10px;border-left:none">${esc(h.text)}</div>`).join('')}
+          habits.map(h => `<div class="habit-line" style="padding:10px 12px;background:rgba(255,77,148,.07);border:1px solid rgba(255,77,148,.22);border-radius:10px;border-left:none">${esc(stripInlineTags(h.text))}</div>`).join('')}
         <div class="row" style="gap:8px;margin-top:6px"><span class="slabel" style="color:#7fe8ad">GAME PLAN</span></div>
         <textarea id="gamePlanInput" rows="5" placeholder="Free-form game plan for ${esc(opponent)}…" data-blur="saveGamePlan">${esc(plan)}</textarea>
       </div>
@@ -584,7 +602,7 @@ function renderLive(s) {
     <div class="col" style="gap:8px">
       <div class="slabel" style="color:#ff9dc4;font-size:10px">THEIR HABITS</div>
       ${habits.length === 0 ? '<div class="muted" style="font-size:11px">No #habit notes from earlier matches yet.</div>' :
-        habits.slice(0, overlay ? 3 : 6).map(h => `<div class="habit-line">${esc(h.text)}</div>`).join('')}
+        habits.slice(0, overlay ? 3 : 6).map(h => `<div class="habit-line">${esc(stripInlineTags(h.text))}</div>`).join('')}
     </div>
     <div class="col" style="gap:6px">
       <div class="slabel" style="color:#7fe8ad;font-size:10px">GAME PLAN</div>
@@ -704,9 +722,13 @@ const handlers = {
   openConfig() { post({ action: 'openConfig' }); },
   openLog() { post({ action: 'openLog' }); },
   toggleTag(el, tag) {
+    const input = document.getElementById('noteInput');
+    const text = input ? input.value : '';
     const i = ui.activeTags.indexOf(tag);
     if (i >= 0) ui.activeTags.splice(i, 1); else ui.activeTags.push(tag);
     render();
+    const again = document.getElementById('noteInput');
+    if (again) again.value = text;
   },
   addNote() {
     const input = document.getElementById('noteInput');
@@ -719,7 +741,8 @@ const handlers = {
     // the badge that was showing when the note was typed.
     const live = S.data.page === 'live'
       || (S.data.recording.isRecording && id === S.data.recording.currentMatchRecordId);
-    post({ action: 'addNote', matchId: id, text: input.value, tags: [...ui.activeTags], gameNumber: composerGameFor(live) });
+    const tags = Array.from(new Set([...ui.activeTags, ...parseInlineTags(input.value)]));
+    post({ action: 'addNote', matchId: id, text: input.value, tags, gameNumber: composerGameFor(live) });
     ui.activeTags = [];
     ui.composerGame = null;
   },
@@ -742,14 +765,19 @@ const handlers = {
     render();
   },
   toggleEditTag(el, tag) {
+    const input = document.getElementById('noteEditInput');
+    const text = input ? input.value : '';
     const i = ui.editingTags.indexOf(tag);
     if (i >= 0) ui.editingTags.splice(i, 1); else ui.editingTags.push(tag);
     render();
+    const again = document.getElementById('noteEditInput');
+    if (again) again.value = text;
   },
   saveNoteEdit() {
     const input = document.getElementById('noteEditInput');
     if (!input || !input.value.trim() || ui.editingNoteId == null) return;
-    post({ action: 'updateNote', noteId: ui.editingNoteId, text: input.value, tags: [...ui.editingTags], gameNumber: ui.editingGame });
+    const tags = Array.from(new Set([...ui.editingTags, ...parseInlineTags(input.value)]));
+    post({ action: 'updateNote', noteId: ui.editingNoteId, text: input.value, tags, gameNumber: ui.editingGame });
     ui.editingNoteId = null;
     ui.editingTags = [];
     ui.editingGame = null;
