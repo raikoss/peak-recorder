@@ -43,6 +43,11 @@ textarea{resize:vertical;font-family:Sora,sans-serif}
 .focus-text{font:600 11.5px/1.45 Sora,sans-serif;color:#f0e6ee;margin-top:3px}
 .search{margin-top:10px;display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:7px 10px}
 .search input{background:transparent;border:none;flex:1;padding:0;font:400 11.5px Sora,sans-serif;color:#e8ebf5}
+.filter-row{margin-top:7px;display:flex;gap:7px}
+.filter-row select{color-scheme:dark;flex:1;min-width:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:8px;color:#e8ebf5;font:400 11px Sora,sans-serif;padding:6px 7px;outline:none}
+.filter-row select:focus{border-color:rgba(69,196,255,.5)}
+.filter-row select.active{border-color:rgba(69,196,255,.6);background:rgba(69,196,255,.1)}
+.filter-row select option{background:#181c30;color:#e8ebf5}
 .match-list{flex:1;overflow-y:auto;min-height:0}
 .match-row{padding:9px 14px;display:flex;flex-direction:column;gap:5px;border-left:2px solid transparent;cursor:pointer}
 .match-row:hover{background:rgba(255,255,255,.03)}
@@ -224,28 +229,48 @@ function wireCommon() {
   });
   const filterEl = document.getElementById('filterInput');
   if (filterEl) filterEl.addEventListener('input', () => { ui.filter = filterEl.value; render(); });
+  const stageEl = document.getElementById('filterStage');
+  if (stageEl) stageEl.addEventListener('change', () => { ui.filterStage = stageEl.value; render(); });
+  const charEl = document.getElementById('filterCharacter');
+  if (charEl) charEl.addEventListener('change', () => { ui.filterCharacter = charEl.value; render(); });
 }
 
-const ui = { filter: '', selectedMatchId: null, activeTags: [], editingNoteId: null, editingTags: [],
+const ui = { filter: '', filterStage: '', filterCharacter: '', selectedMatchId: null, activeTags: [], editingNoteId: null, editingTags: [],
   composerGame: null, editingGame: null }; // composerGame null = auto (live) / whole-match (vod)
 
 // ================= LIBRARY (turn 2a) =================
 
-function pickSelectedMatch(s) {
+function pickSelectedMatch(s, fromList) {
+  const list = fromList || s.matches;
   if (ui.selectedMatchId) {
-    const m = s.matches.find(x => x.id === ui.selectedMatchId);
+    const m = list.find(x => x.id === ui.selectedMatchId);
     if (m) return m;
   }
-  return s.matches[0] || null;
+  return list[0] || null;
+}
+
+// Distinct values across all recorded matches, for the filter dropdowns —
+// sorted so the list doesn't reshuffle as new matches come in.
+function sortedUnique(values) {
+  return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
 }
 
 function renderLibrary(s) {
+  const allStages = sortedUnique(s.matches.flatMap(m => m.stages || []));
+  const allCharacters = sortedUnique(s.matches.map(m => m.opponentCharacter));
+
   const filtered = s.matches.filter(m => {
-    if (!ui.filter) return true;
-    const f = ui.filter.toLowerCase();
-    return m.opponent.toLowerCase().includes(f) || m.notes.some(n => n.text.toLowerCase().includes(f));
+    if (ui.filter) {
+      const f = ui.filter.toLowerCase();
+      if (!(m.opponent.toLowerCase().includes(f) || m.notes.some(n => n.text.toLowerCase().includes(f)))) return false;
+    }
+    if (ui.filterStage && !(m.stages || []).includes(ui.filterStage)) return false;
+    if (ui.filterCharacter && m.opponentCharacter !== ui.filterCharacter) return false;
+    return true;
   });
-  const selected = pickSelectedMatch(s);
+  // Selection follows the filtered list so the detail pane never shows a
+  // match that's been filtered out of the sidebar.
+  const selected = pickSelectedMatch(s, filtered);
 
   return `
   <div class="sidebar">
@@ -260,12 +285,22 @@ function renderLibrary(s) {
         <div class="focus-text">${s.focusGoal ? esc(s.focusGoal) : '<span class="muted">Click to set a practice focus…</span>'}</div>
       </div>
       <div class="search"><input id="filterInput" type="text" placeholder="Filter opponent, note…" value="${esc(ui.filter)}"></div>
+      <div class="filter-row">
+        <select id="filterStage" class="${ui.filterStage ? 'active' : ''}">
+          <option value="">Stage: any</option>
+          ${allStages.map(st => `<option value="${esc(st)}" ${ui.filterStage === st ? 'selected' : ''}>${esc(st)}</option>`).join('')}
+        </select>
+        <select id="filterCharacter" class="${ui.filterCharacter ? 'active' : ''}">
+          <option value="">Character: any</option>
+          ${allCharacters.map(c => `<option value="${esc(c)}" ${ui.filterCharacter === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+        </select>
+      </div>
     </div>
     <div class="match-list">
-      ${filtered.length === 0 ? '<div class="empty">No matches recorded yet.</div>' : filtered.map(m => matchRow(m, s)).join('')}
+      ${filtered.length === 0 ? '<div class="empty">No matches match these filters.</div>' : filtered.map(m => matchRow(m, s, selected)).join('')}
     </div>
     <div class="sidebar-foot">
-      <span>${s.matches.length} recordings</span>
+      <span>${filtered.length === s.matches.length ? `${s.matches.length} recordings` : `${filtered.length} of ${s.matches.length}`}</span>
       <span class="link" data-click="openSettings">Settings</span>
     </div>
   </div>
@@ -273,9 +308,9 @@ function renderLibrary(s) {
   `;
 }
 
-function matchRow(m, s) {
+function matchRow(m, s, selected) {
   const live = !!s.recording.phase && s.recording.currentMatchRecordId === m.id;
-  const sel = ui.selectedMatchId ? ui.selectedMatchId === m.id : (!ui.selectedMatchId && m === pickSelectedMatch(s));
+  const sel = m === selected;
   const r = resultLabel(m);
   return `
   <div class="match-row ${live ? 'live' : (sel ? 'selected' : '')}" data-click="${live ? 'openLive' : 'selectMatch'}" data-arg="${m.id}">
