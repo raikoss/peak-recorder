@@ -233,6 +233,18 @@
     return null;
   }
 
+  // Each game gets its own "Game N" tab, all rendered into the DOM at once —
+  // only the active tab's panel is visible, the rest sit under a
+  // display:none ancestor (dumps 2026-07-22, match 286282: Game 1's panel
+  // carried class="hidden" once Game 2 became active). offsetParent is null
+  // for anything under display:none, so this is a cheap visibility check
+  // without needing to know the site's exact class name for it. Without this,
+  // a still-in-the-DOM Game 1 panel is read as the current game forever,
+  // since it comes first in document order.
+  function isHidden(el) {
+    return el.offsetParent === null;
+  }
+
   // Backup signal: during stage striking the page shows the whole stage grid
   // (9 splash images); once the stage is locked in, exactly one remains —
   // its alt text is the display name ("Small Battlefield", dump 2026-07-10).
@@ -242,6 +254,7 @@
     const bySrc = new Map();
     for (const img of main.querySelectorAll('img[src*="/images/stages/"]')) {
       if (summary && summary.contains(img)) continue;
+      if (isHidden(img)) continue;
       const src = img.getAttribute("src");
       if (!bySrc.has(src)) bySrc.set(src, (img.getAttribute("alt") || "").trim());
     }
@@ -262,6 +275,7 @@
     const byPlayer = new Map();
     for (const img of main.querySelectorAll('img[src*="/images/characters/splashes/"]')) {
       if (summary && summary.contains(img)) continue;
+      if (isHidden(img)) continue;
       const alt = (img.getAttribute("alt") || "").trim();
       if (!alt) continue;
       let el = img.parentElement;
