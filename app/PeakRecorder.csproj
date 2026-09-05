@@ -8,6 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>PeakRecorder</AssemblyName>
     <RootNamespace>PeakRecorder</RootNamespace>
+    <ApplicationIcon>Assets\icons\app.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

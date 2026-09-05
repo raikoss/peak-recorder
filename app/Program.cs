@@ -79,7 +79,7 @@ internal sealed class TrayAppContext : ApplicationContext
 
         _tray = new NotifyIcon
         {
-            Icon = SystemIcons.Application,
+            Icon = AppIcons.Tray,
             Text = "PeakRecorder — idle",
             Visible = true,
             ContextMenuStrip = menu,
@@ -92,6 +92,7 @@ internal sealed class TrayAppContext : ApplicationContext
                 ? $"Recording vs {_recorder.Opponent ?? "unknown"}"
                 : "Idle";
             _statusItem.Text = text;
+            _tray.Icon = _recorder.IsRecording ? AppIcons.TrayRecording : AppIcons.Tray;
             _tray.Text = ("PeakRecorder — " + text) is { Length: > 63 } t ? t[..63] : "PeakRecorder — " + text;
             if (_recorder.IsRecording)
             {

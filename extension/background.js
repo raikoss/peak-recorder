@@ -10,23 +10,14 @@ let registeredThisLife = false;
 
 // ---- toolbar icon ----------------------------------------------------------
 
-function drawDot(color, size) {
-  const canvas = new OffscreenCanvas(size, size);
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, size, size);
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(size / 2, size / 2, size * 0.42, 0, Math.PI * 2);
-  ctx.fill();
-  return ctx.getImageData(0, 0, size, size);
-}
-
-// "off" = companion app unreachable, "ok" = connected, "rec" = recording
+// "off" = companion app unreachable, "ok" = connected, "rec" = recording.
+// Icons are static PNGs (see icons/); browsers that don't render dynamic
+// ImageData icons (Arc) still show these, so only the badge is drawn here.
 function setIconState(state) {
-  const color = state === "off" ? "#9ca3af" : state === "rec" ? "#ef4444" : "#22c55e";
-  chrome.action.setIcon({ imageData: { 16: drawDot(color, 16), 32: drawDot(color, 32) } });
+  const name = state === "off" ? "disconnected" : state === "rec" ? "recording" : "ready";
+  chrome.action.setIcon({ path: { 16: `icons/${name}-16.png`, 32: `icons/${name}-32.png` } });
   chrome.action.setBadgeText({ text: state === "off" ? "!" : state === "rec" ? "REC" : "" });
-  chrome.action.setBadgeBackgroundColor({ color: state === "rec" ? "#ef4444" : "#f59e0b" });
+  chrome.action.setBadgeBackgroundColor({ color: state === "rec" ? "#ff4d94" : "#ffd166" });
   chrome.action.setTitle({
     title:
       state === "off"

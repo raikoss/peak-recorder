@@ -42,6 +42,7 @@ internal sealed class MainWindow : Form
         _overlay = overlay;
 
         BackColor = Color.FromArgb(0x10, 0x14, 0x26);
+        Icon = AppIcons.App;
         if (overlay)
         {
             Text = "PeakRecorder — Live match";

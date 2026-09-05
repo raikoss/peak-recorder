@@ -19,6 +19,7 @@ internal sealed class BriefingWindow : Form
         MaximizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = Color.FromArgb(0x10, 0x14, 0x26);
+        Icon = AppIcons.App;
         Controls.Add(_web);
 
         _ = InitAsync(opponent, data);
