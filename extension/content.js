@@ -42,6 +42,43 @@
 
   const log = (...args) => state.debug && console.log(TAG, ...args);
 
+  // Browsing the rest of the site mid-match must not split the recording:
+  // when the match page is left while recording, keep the match state and
+  // only stop after this grace period without returning. Coming back to the
+  // same match page cancels the timer and the recording just continues.
+  const AWAY_GRACE_MS = 5 * 60 * 1000;
+  let awayTimer = null;
+
+  function clearAwayTimer() {
+    if (awayTimer) {
+      clearTimeout(awayTimer);
+      awayTimer = null;
+    }
+  }
+
+  function resetMatchState() {
+    clearAwayTimer();
+    state.matchId = null;
+    state.opponent = null;
+    state.foundSent = false;
+    state.startedSent = false;
+    state.finishedSent = false;
+    state.lastStage = null;
+    state.myChar = null;
+    state.oppChar = null;
+    state.liveGamesWon = -1;
+    state.liveGamesLost = -1;
+    state.liveInProgress = null;
+  }
+
+  function sendMatchEnded() {
+    send("event", {
+      type: "match_ended",
+      matchId: state.matchId,
+      opponent: state.opponent,
+    });
+  }
+
   chrome.storage.local.get(["myName", "stopOnLeave", "debug"], (v) => {
     if (typeof v.myName === "string" && v.myName.trim()) state.myName = v.myName.trim();
     if (typeof v.stopOnLeave === "boolean") state.stopOnLeave = v.stopOnLeave;
@@ -303,27 +340,39 @@
       if (state.matchId) {
         log("left match page", state.matchId, `(${reason})`);
         if (state.stopOnLeave && state.startedSent && !state.finishedSent) {
-          send("event", {
-            type: "match_ended",
-            matchId: state.matchId,
-            opponent: state.opponent,
-          });
+          // Mid-match navigation elsewhere on the site: keep recording and
+          // keep the match state so coming back continues the same file.
+          // Only stop if the user stays away for the whole grace period.
+          if (!awayTimer) {
+            log(`recording continues; stopping in ${AWAY_GRACE_MS / 60000} min unless we return`);
+            awayTimer = setTimeout(() => {
+              log("grace period expired away from match", state.matchId, "- stopping recording");
+              sendMatchEnded();
+              resetMatchState();
+            }, AWAY_GRACE_MS);
+          }
         } else if (state.foundSent && !state.startedSent) {
           send("event", { type: "match_dismissed", matchId: state.matchId });
+          resetMatchState();
+        } else {
+          resetMatchState();
         }
-        state.matchId = null;
-        state.opponent = null;
-        state.foundSent = false;
-        state.startedSent = false;
-        state.finishedSent = false;
-        state.lastStage = null;
-        state.myChar = null;
-        state.oppChar = null;
-        state.liveGamesWon = -1;
-        state.liveGamesLost = -1;
-        state.liveInProgress = null;
       }
       return;
+    }
+
+    // Back on a match page: if it's the match we were recording, cancel the
+    // pending away-stop and carry on. A different match id means the old one
+    // is over — stop its recording now so the new match starts clean.
+    if (awayTimer) {
+      if (state.matchId === id) {
+        log("returned to match", id, "within grace period; recording continues");
+        clearAwayTimer();
+      } else {
+        log("navigated to a different match", id, "- stopping recording of", state.matchId);
+        sendMatchEnded();
+        resetMatchState();
+      }
     }
 
     const players = getMatchPlayers();
@@ -353,6 +402,12 @@
     });
 
     if (state.matchId !== id) {
+      // Jumped straight from one match page to another while recording:
+      // close out the old match before adopting the new one.
+      if (state.matchId && state.startedSent && !state.finishedSent) {
+        log("switched match pages", state.matchId, "->", id, "- stopping old recording");
+        sendMatchEnded();
+      }
       // New match page: reset. If it's already finished (browsing history),
       // mark it done so we never start recording for it.
       state.matchId = id;
