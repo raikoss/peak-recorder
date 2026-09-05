@@ -216,11 +216,14 @@ function render() {
   withPreservedFocus(() => {
     const s = S.data;
     const app = document.getElementById('app');
+    const listScroll = app.querySelector('.match-list')?.scrollTop ?? 0;
     if (!s) { app.innerHTML = ''; return; }
     if (s.page === 'settings') app.innerHTML = renderSettings(s);
     else if (s.page === 'player') app.innerHTML = renderPlayer(s);
     else if (s.page === 'live') app.innerHTML = renderLive(s);
     else app.innerHTML = renderLibrary(s);
+    const list = app.querySelector('.match-list');
+    if (list) list.scrollTop = listScroll;
     wireCommon();
   });
 }
