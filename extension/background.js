@@ -11,11 +11,15 @@ let registeredThisLife = false;
 // ---- toolbar icon ----------------------------------------------------------
 
 // "off" = companion app unreachable, "ok" = connected, "rec" = recording.
-// Icons are static PNGs (see icons/); browsers that don't render dynamic
-// ImageData icons (Arc) still show these, so only the badge is drawn here.
+// Icons are static PNGs (see icons/). Note: Arc ignores chrome.action.setIcon
+// entirely (both path and ImageData) but does render the badge, so the
+// manifest default is the "ready" mark and the badge alone carries state
+// there ("!" = app not running, "REC" = recording). Chrome/Edge show both.
 function setIconState(state) {
   const name = state === "off" ? "disconnected" : state === "rec" ? "recording" : "ready";
-  chrome.action.setIcon({ path: { 16: `icons/${name}-16.png`, 32: `icons/${name}-32.png` } });
+  chrome.action
+    .setIcon({ path: { 16: `icons/${name}-16.png`, 32: `icons/${name}-32.png` } })
+    .catch((e) => console.warn("setIcon failed:", e));
   chrome.action.setBadgeText({ text: state === "off" ? "!" : state === "rec" ? "REC" : "" });
   chrome.action.setBadgeBackgroundColor({ color: state === "rec" ? "#ff4d94" : "#ffd166" });
   chrome.action.setTitle({
