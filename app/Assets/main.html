@@ -347,9 +347,11 @@ function matchRow(m, s, selected) {
   const live = !!s.recording.phase && s.recording.currentMatchRecordId === m.id;
   const sel = m === selected;
   const r = resultLabel(m);
+  const oppIcon = m.opponentCharacter ? charIcon(m.opponentCharacter) : '';
   return `
   <div class="match-row ${live ? 'live' : (sel ? 'selected' : '')}" data-click="${live ? 'openLive' : 'selectMatch'}" data-arg="${m.id}">
     <div class="match-top">
+      ${oppIcon ? `<span title="${esc(m.opponentCharacter)}" style="align-self:center;display:flex">${oppIcon}</span>` : ''}
       <span class="match-opp">${esc(m.opponent)}</span>
       ${live ? '<span style="margin-left:auto;font:700 10.5px Sora,sans-serif;color:#ff9dc4">LIVE</span>' :
         (r ? `<span class="chip ${r.cls}" style="margin-left:auto">${r.text}</span>` : '')}
