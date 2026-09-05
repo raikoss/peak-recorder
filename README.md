@@ -1,132 +1,147 @@
 # Smash the Peak Recorder
 
-Automatically records your [Smash the Peak](https://www.smashthepeak.eu) ladder matches with OBS, names the file after your opponent, and keeps a match history with per-opponent notes and game plans.
+Play your [Smash the Peak](https://www.smashthepeak.eu) ladder sets as usual. This tool records every set with OBS for you, names the video after your opponent, and keeps a match history where you can write notes and game plans for the players you keep running into.
 
-Two parts:
+## What it does
 
-- **`extension/`** — Chrome extension (Manifest V3). Detects when you're on an active match page and reports match found/start/end, the opponent's name, and per-game stage, characters and score.
-- **`app/`** — `PeakRecorder`, a .NET 8 Windows tray app. Receives events from the extension on `http://127.0.0.1:8123`, launches OBS if needed, starts/stops recording via obs-websocket, renames the finished file to e.g. `2026-07-07_19-32_vs_OpponentName.mkv`, and stores match results, notes and game plans in a local SQLite database.
+- **Records automatically.** When you're in a match on smashthepeak.eu, OBS starts recording as soon as game 1 is about to begin and stops when the set is over. No hotkeys, no forgetting to hit record.
+- **Names your videos.** Files come out like `2026-07-07_19-32_vs_OpponentName.mkv` instead of `2026-07-07 19-32-11.mkv`. Optionally moves them into a folder of your choice.
+- **Keeps a match history.** Every set is saved with the result, score, stages played and the characters both of you used.
+- **Lets you take notes.** Write notes mid-set ("rolls to ledge after every shield") or afterward while reviewing the VOD. Live notes are timestamped so you can jump to that moment in the video.
+- **Remembers your game plan per opponent.** Before a set starts, a small card pops up with your record against that player and the game plan you wrote last time.
 
-## Setup
+It is made of two pieces that talk to each other:
 
-### 1. Companion app
+1. **PeakRecorder** – a small Windows program that lives in your system tray. It controls OBS and stores your history.
+2. **A Chrome extension** – it watches the smashthepeak.eu match page and tells PeakRecorder when a set starts and ends, who you're playing, and what's being picked.
 
-```
-cd app
-dotnet build -c Release
-```
+## What you need
 
-Run `app\bin\Release\net8.0-windows\PeakRecorder.exe`. It sits in the system tray; double-click the tray icon (or *Open PeakRecorder* in the tray menu) for the main window.
+- Windows 10 or 11
+- [OBS Studio](https://obsproject.com/) set up to capture your Switch, with recording settings the way you like them
+- Google Chrome (or another Chromium browser like Brave, Edge or Arc)
+- The free [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0), only needed once to build the app (there's no installer yet)
 
-The main window and the pre-match briefing are rendered with WebView2, so the [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) must be installed. It ships with Windows 11 and with most Windows 10 installs that have Edge.
+## Getting started
 
-To start it with Windows: press `Win+R`, run `shell:startup`, and drop a shortcut to `PeakRecorder.exe` there.
+This will hopefully get easier with time, but for now the installation steps are pretty manual. It doesn't take much longer than 10 minutes to set up the first time even if you have to don't have all prerequisites yet.
 
-Config lives at `%APPDATA%\PeakRecorder\config.json` (tray menu → *Open config*). The common keys can also be edited in the main window's *Settings* page:
+### Step 1 – Get the files
 
-| Key | Default | Meaning |
-|---|---|---|
-| `BridgePort` | `8123` | Local port the extension talks to |
-| `ObsExePath` | `C:\Program Files\obs-studio\bin\64bit\obs64.exe` | OBS location |
-| `ObsLaunchArgs` | `--disable-shutdown-check --minimize-to-tray` | Args when launching OBS |
-| `ObsWsPort` / `ObsWsPassword` | `null` | Overrides; by default read from OBS's own websocket config |
-| `FilenameTemplate` | `{date}_{time}_vs_{opponent}` | Also supports `{matchId}` |
-| `RecordingsFolder` | `null` | Move finished recordings here (created if missing; `%VARS%` expanded; other drives OK). `null` = leave them in OBS's output folder |
-| `DeleteOriginalAfterRemux` | `true` | With OBS auto-remux (mkv → mp4): delete the `.mkv` once the renamed `.mp4` looks complete (≥90% of the original's size) |
-| `BriefingStyle` | `card` | How the pre-match briefing appears: `card` (small always-on-top card), `full` (full window) or `off`. Also switchable from the tray menu |
+Click the green **Code** button at the top of this page and choose **Download ZIP**, then unzip it somewhere you'll keep it, for example `C:\SmashRecorder`. (If you use git, cloning works too.)
 
-Other files under `%APPDATA%\PeakRecorder\`:
+### Step 2 – Build PeakRecorder
 
-- `log.txt` — app log (tray menu → *Open log*)
-- `data.db` — SQLite database with matches, notes, game plans and the focus goal
-- `icons\` — cached character stock icons (see below)
-- `dumps\` — page dumps for debugging detection
-- `nativehost.json` — Chrome native messaging host manifest
+1. Install the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) if you haven't already (pick the **SDK**, not just the runtime).
+2. Open the unzipped folder, go into the `app` folder, click the address bar at the top of the Explorer window, type `cmd` and press Enter. A black command window opens in that folder.
+3. Paste this and press Enter:
 
-### 2. OBS
+   ```
+   dotnet build -c Release
+   ```
 
-Nothing to do. If OBS is closed, the app enables the WebSocket server in OBS's config (reusing your existing password) and launches OBS itself. Make sure your OBS scene captures your Switch feed and that recording output settings are how you want them.
+   This will build the app based on the source code. It takes a minute the first time. When it says **Build succeeded**, you're done.
 
-### 3. Chrome extension
+4. Your program is now at `app\bin\Release\net8.0-windows\PeakRecorder.exe`. Double-click it. A new icon appears in the system tray (bottom-right, next to the clock; you may need to click the little `^` arrow to see it).
 
-1. Open `chrome://extensions`, enable **Developer mode**.
-2. **Load unpacked** → select the `extension/` folder.
-3. Click the extension icon: it should say *Companion app connected* when `PeakRecorder.exe` is running.
+**Tip:** to have it start with Windows, press `Win+R`, type `shell:startup`, press Enter, and drop a shortcut to `PeakRecorder.exe` in the folder that opens. The Chrome extension will warn you if the app is not running though, so this is preference.
 
-## How it works
+### Step 3 – Install the Chrome extension
 
-1. You get matched on smashthepeak.eu and open the match page (`/match/<id>`).
-2. The content script reads the two player names from the page, works out which one isn't you (your name is auto-detected from the site header, or set it manually in the popup), and sends `match_found`. PeakRecorder creates a match record and shows the **pre-match briefing** for that opponent.
-3. Once characters and the game-1 stage are locked in, the extension sends `match_started`. PeakRecorder launches/connects to OBS and starts recording.
-4. During the set the extension sends `match_update` events with the current stage, both characters and the live score, which feed the live match pane.
-5. When the page shows the match as finished, it sends `match_ended` together with the result (W/L and game score). PeakRecorder stops the recording, waits for OBS to release the file, renames it to `2026-07-07_19-32_vs_Opponent.mkv`, and stores the result on the match record.
+1. In Chrome, open `chrome://extensions` (paste it in the address bar).
+2. Turn on **Developer mode** (toggle in the top right).
+3. Click **Load unpacked** and choose the `extension` folder from the files you unzipped.
+4. Click the puzzle-piece icon in Chrome's toolbar and pin **Smash the Peak Recorder** so you can see its icon.
 
-If you leave the match page mid-set and *Stop on leave* is enabled (default), the recording keeps going for a 5 minute grace period so you can browse the rest of the site. Returning to the same match page cancels the timer; staying away for the whole period stops the recording. Closing the tab or browser stops it immediately.
+Click the icon: it should say **Companion app connected**. If it says the app isn't running, make sure you started `PeakRecorder.exe` in step 2.
 
-If you leave a match page before recording started (for example a match that never got played), a `match_dismissed` event closes the briefing and the empty match record is deleted.
+### Step 4 – Play
 
-The extension popup also has manual **Start/Stop recording** buttons as a fallback, and the tray menu has the same (*Start/Stop recording now*).
+That's it. Go to smashthepeak.eu and play a set. You don't need to open OBS yourself; PeakRecorder will launch it (minimized to the tray) the first time a set starts.
 
-### Connection status
+Here's what you'll see during a set:
 
-While on smashthepeak.eu with the companion app unreachable, the extension shows a highlighted **banner on the page** ("The recorder app is not running…") with a **Start recorder app** button; it turns green and disappears once the app is up. Dismissing it silences the warning until the app has reconnected once. Checked every 15 seconds.
+- **Match found** – as soon as you open the match page, a small card pops up with the opponent's name, your record against them, and your game plan if you've written one.
+- **Game 1 stage locked in** – recording starts. The extension icon turns red with **REC**, and the tray icon changes too.
+- **Set over** – recording stops and the file is renamed after your opponent. The result and score are saved to your history.
 
-The toolbar icon also reflects the state (gray + `!` = unreachable, green = connected, red + `REC` = recording). Icons are static PNGs, but some Chromium forks (Arc) ignore `chrome.action.setIcon`, so they always show the default "ready" icon there — the banner is the reliable signal.
+If you want to check something on the site mid-set, go ahead. The recording keeps going for 5 minutes while you're off the match page, and stopping happens right away if you close the tab.
 
-Both the banner button and the popup's **Start companion app** button use Chrome native messaging: the app registers itself as the host (`eu.smashthepeak.peakrecorder`, written to `%APPDATA%\PeakRecorder\nativehost.json` + `HKCU\Software\Google\Chrome\NativeMessagingHosts`) the first time it runs while the extension is installed — so run `PeakRecorder.exe` manually once before relying on the buttons.
+## The main window
 
-## Main window
+Double-click the tray icon (or right-click it and choose **Open PeakRecorder**) to open the main window.
 
-Open it from the tray icon. It has four pages:
+- **Library** – all your recorded sets, newest first. Search by opponent name or note text, or filter by stage and character. Click a set to see its notes, open the video, or fix the result if it was detected wrong.
+- **Live** – while a set is in progress: current score, stage, characters, your game plan, and a box to type notes. Notes typed here are stamped with the time in the recording.
+- **Player page** – click an opponent's name to see every set against them and write your **game plan** for next time.
+- **Settings** – where videos go, how they're named, and where OBS is installed.
 
-- **Library** — every recorded match, newest first, with result, score, stages played and both characters. Filter by opponent or note text, by stage, or by character. Selecting a match shows its notes, lets you edit result/stages/characters by hand, open the video file, or delete the match.
-- **Live** — shown while a match is in progress: the opponent, live score, current stage and characters, your game plan for that opponent, and a note composer. Notes taken here are timestamped relative to the recording, so you can jump to the moment in the VOD later.
-- **Player** — per-opponent view: your record against them, every set played, and the free-form **game plan** that is shown in the pre-match briefing next time you meet them.
-- **Settings** — filename template, recordings folder, OBS path and the remux-delete toggle, plus shortcuts to the raw config and the log.
+**Notes and tags:** type `#habit`, `#adapt`, `#work-on` or `#tech` anywhere in a note (like `#habit rolls in from ledge`) to tag it, or click the tag buttons. Notes can be attached to a specific game of the set, edited, and deleted. There's also a **weekly focus** box at the top of the library for whatever you're currently working on; it shows up on the pre-match card too.
 
-### Notes
+**Pre-match card:** right-click the tray icon → **Pre-match briefing** to choose between the small always-on-top card, a full-screen version, or turning it off. **Preview briefing** shows you what it looks like without needing a match.
 
-- Notes can be added live (timestamped) or after the fact on any match in the library ("VOD" notes, optionally attached to a specific game of the set).
-- Type `#tag` anywhere in the note text to tag it (`#habit jumps from ledge`). Tags show as chips; the built-in ones (`#habit`, `#adapt`, `#work-on`, `#tech`) have quick-toggle buttons next to the composer, and a game number (G1–G5) can be picked the same way.
-- Notes can be edited and deleted from the match view.
-- A **weekly focus** goal can be set at the top of the library and is also shown in the briefing.
+## If something isn't working
 
-### Pre-match briefing
+- **Extension says the app isn't running.** Start `PeakRecorder.exe`. When you're on smashthepeak.eu without it running, a banner appears at the top of the page with a **Start recorder app** button; that button works after you've run PeakRecorder manually at least once.
+- **Recording didn't start.** Right-click the tray icon → **Open log** and look at the last lines. The extension popup also has manual **Start recording / Stop recording** buttons as a backup, and so does the tray menu.
+- **Extension icon doesn't change colour.** Some browsers (Arc in particular) don't show icon changes. The banner on the page and the tray icon are the reliable signals.
+- **Log says it couldn't connect to OBS.** PeakRecorder can only turn on OBS's built-in WebSocket server while OBS is closed. If OBS was already open the very first time you used the recorder, close OBS and let PeakRecorder launch it once. After that it works either way.
+- **The site changed and detection broke.** Turn on **Debug logging** in the extension popup and click **Dump page for debugging**, then open an issue and attach the dump from `%APPDATA%\PeakRecorder\dumps\`.
 
-When a match is found (before it starts), a briefing pops up with the opponent's name, your history against them, your game plan and this week's focus. `BriefingStyle` picks between a small always-on-top card, a full window (which hides itself when game 1 starts), or none. *Preview briefing* in the tray menu shows it with a test opponent.
+## Where your stuff lives
 
-### Character icons
+Everything the app saves is in `%APPDATA%\PeakRecorder\` (paste that into the Explorer address bar):
 
-The site serves stock icons at `/images/characters/icons/<Character>`, but rate-limits requests from outside the browser. The extension therefore fetches any icons the app is missing (`GET /icons/needed`) same-origin from the page and uploads them through the bridge (`POST /icons`). They are cached in `%APPDATA%\PeakRecorder\icons\` so past matches show icons even offline.
+| File          | What it is                                                                                |
+| ------------- | ----------------------------------------------------------------------------------------- |
+| `config.json` | Settings. Most can be changed from the Settings page; open the file directly for the rest |
+| `data.db`     | Your match history, notes and game plans. Back this up if you care about it               |
+| `log.txt`     | The log, useful when something goes wrong                                                 |
+| `icons\`      | Cached character icons                                                                    |
 
-## Detection details
+Your videos are wherever OBS normally saves recordings, unless you set a **Recordings folder** in Settings.
 
-Detection was tuned against real page dumps (2026-07-07):
+### All settings
 
-- **You** are identified by player *ID*: the "Active Player" sidebar contains an avatar-only link to `/en/player/<id>` next to the `/en/settings/user` link.
-- **Match players**: the match page has exactly two named `/en/player/<id>` links; the one that isn't you is the opponent. Matches you spectate (where your ID isn't a participant) are never recorded.
-- **Recording start**: not at match creation, but once characters and the game-1 stage are picked — the score panel's status flips to `Select the winner.` (participant view; spectators see `Players picking winner...`, but spectated matches are never recorded anyway). Backup signals: exactly one stage splash image on the page (the striking grid shows all 9; the locked-in stage shows 1), or a completed game (in case the page is opened mid-game).
-- **Per-game info**: the locked-in stage splash and the two character portraits give stage and characters for the current game; completed game rows give the running score. Swapping stage or character before a game starts is reported again so the last value wins.
-- **Match end**: the score panel's `<name> won this match.` line, or server chat lines (`Server: … won the Match`, `Server: Match concluded`). Patterns are anchored so typed chat messages can't trigger them. The winner name and the final game count are compared against your own name to produce the W/L result and score.
+| Setting                       | Default                                           | What it does                                                                    |
+| ----------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `FilenameTemplate`            | `{date}_{time}_vs_{opponent}`                     | How videos are named. `{matchId}` also works                                    |
+| `RecordingsFolder`            | empty                                             | Move finished videos here. Empty = leave them in OBS's folder                   |
+| `DeleteOriginalAfterRemux`    | on                                                | If OBS is set to convert recordings to mp4, delete the mkv once the mp4 is done |
+| `BriefingStyle`               | `card`                                            | Pre-match card style: `card`, `full` or `off`                                   |
+| `ObsExePath`                  | `C:\Program Files\obs-studio\bin\64bit\obs64.exe` | Change if OBS is installed somewhere else                                       |
+| `ObsLaunchArgs`               | `--disable-shutdown-check --minimize-to-tray`     | Options used when PeakRecorder starts OBS                                       |
+| `ObsWsPort` / `ObsWsPassword` | empty                                             | Normally read from OBS automatically; only set these if that fails              |
+| `BridgePort`                  | `8123`                                            | Local port the extension uses to talk to the app                                |
 
-To debug, keep **Debug logging** on in the popup and watch the DevTools console for `[PeakRecorder]` lines. If the site's markup changes, click **Dump page for debugging** in the popup — it saves the page structure to `%APPDATA%\PeakRecorder\dumps\` for re-tuning `extension/content.js`.
+## Good to know
 
-## Bridge API
+- One video per set. It doesn't split into one file per game.
+- Opening an old, finished match page never starts a recording, so browsing your history on the site is safe.
+- Sets you spectate are never recorded.
+- If OBS was already recording when a set starts, that recording is used and renamed when the set ends.
+- The app never deletes your videos (except the mkv original after a successful mp4 conversion, if that option is on). Deleting a set from the library only removes it from the history.
 
-The extension talks to the app over plain HTTP on `127.0.0.1:<BridgePort>`:
+## For developers
 
-| Endpoint | Purpose |
-|---|---|
-| `GET /status` | `{ recording, opponent, matchId }` |
-| `POST /event` | `{ type, matchId, opponent, players, stage, myCharacter, opponentCharacter, gamesWon, gamesLost, gameInProgress, result }`. Types: `match_found`, `match_started`, `match_update`, `match_ended`, `match_dismissed`, `manual_start`, `manual_stop` |
-| `GET /icons/needed` | Character names the app has no cached icon for |
-| `POST /icons` | `{ name, contentType, data (base64) }` |
-| `POST /register` | `{ extensionId }` — registers the native messaging host for that extension |
-| `POST /dump` | Saves the request body to `%APPDATA%\PeakRecorder\dumps\` |
+Technical details for anyone who wants to poke at the code.
 
-## Notes
+- **Extension** (`extension/`): Manifest V3. `content.js` reads the match page and sends events to `http://127.0.0.1:8123`. `background.js` polls the app's status and sets the toolbar icon. Native messaging (`eu.smashthepeak.peakrecorder`, registered by the app under `HKCU\Software\Google\Chrome\NativeMessagingHosts`) is used to launch the app from the browser.
+- **App** (`app/`): .NET 8 WinForms tray app. The main window and briefing card are a WebView2 page (`Assets/main.html`). Storage is SQLite via `Microsoft.Data.Sqlite`. OBS is controlled via obs-websocket 5.
+- **Bridge API** on `127.0.0.1:<BridgePort>`:
 
-- One recording per set; per-game splitting isn't implemented.
-- Recording never starts for already-finished match pages (browsing history is safe).
-- If OBS was already recording when a match starts, the app adopts that recording and will rename it when the match ends.
-- The app never deletes video files on its own (apart from the `.mkv` original after a successful remux, if enabled). Deleting a match from the library removes only the database record.
+  | Endpoint                            | Purpose                                                                                                                                                                                                                                            |
+  | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `GET /status`                       | `{ recording, opponent, matchId }`                                                                                                                                                                                                                 |
+  | `POST /event`                       | `{ type, matchId, opponent, players, stage, myCharacter, opponentCharacter, gamesWon, gamesLost, gameInProgress, result }`. Types: `match_found`, `match_started`, `match_update`, `match_ended`, `match_dismissed`, `manual_start`, `manual_stop` |
+  | `GET /icons/needed` / `POST /icons` | Character icon cache; the extension fetches icons same-origin (the site rate-limits the app) and uploads them                                                                                                                                      |
+  | `POST /register`                    | `{ extensionId }` – registers the native messaging host                                                                                                                                                                                            |
+  | `POST /dump`                        | Saves a page dump to `dumps\`                                                                                                                                                                                                                      |
+
+- **Detection** (tuned against page dumps from 2026-07-07):
+  - You are identified by player ID from the "Active Player" sidebar link to `/en/player/<id>`.
+  - The match page has exactly two named `/en/player/<id>` links; the one that isn't you is the opponent. If you're not a participant, nothing is recorded.
+  - Recording starts when the score panel reads `Select the winner.` (fallbacks: exactly one stage splash image on the page, or an already-completed game).
+  - Stage, characters and running score come from the locked-in stage splash, the character portraits and the completed game rows. Re-picks before a game starts are reported again.
+  - Match end is the `<name> won this match.` line or the server chat lines `… won the Match` / `Match concluded`; patterns are anchored so typed chat can't trigger them. The result is derived by comparing the winner to your own name.
+  - Leaving the match page mid-set starts a 5 minute grace timer before stopping; the `pagehide` event stops immediately via `sendBeacon`.
