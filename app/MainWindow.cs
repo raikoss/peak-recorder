@@ -20,6 +20,7 @@ internal sealed class MainWindow : Form
     private readonly Config _config;
     private readonly Store _store;
     private readonly RecorderService _recorder;
+    private readonly CharacterIcons _icons;
     private readonly bool _overlay;
     private readonly WebView2 _web = new() { Dock = DockStyle.Fill };
 
@@ -32,11 +33,12 @@ internal sealed class MainWindow : Form
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
-    public MainWindow(Config config, Store store, RecorderService recorder, bool overlay = false)
+    public MainWindow(Config config, Store store, RecorderService recorder, CharacterIcons icons, bool overlay = false)
     {
         _config = config;
         _store = store;
         _recorder = recorder;
+        _icons = icons;
         _overlay = overlay;
 
         BackColor = Color.FromArgb(0x10, 0x14, 0x26);
@@ -64,11 +66,13 @@ internal sealed class MainWindow : Form
 
         _store.Changed += PushStateOnUiThread;
         _recorder.StateChanged += PushStateOnUiThread;
+        _icons.Changed += PushStateOnUiThread;
 
         FormClosed += (_, _) =>
         {
             _store.Changed -= PushStateOnUiThread;
             _recorder.StateChanged -= PushStateOnUiThread;
+            _icons.Changed -= PushStateOnUiThread;
         };
 
         _ = InitAsync();
@@ -81,6 +85,12 @@ internal sealed class MainWindow : Form
             var env = await BriefingRuntime.GetEnvironmentAsync();
             await _web.EnsureCoreWebView2Async(env);
             _web.CoreWebView2.WebMessageReceived += (_, e) => HandleMessage(e.TryGetWebMessageAsString());
+
+            // Serve the cached character icons to the page (which itself is
+            // loaded via NavigateToString, so it has no folder of its own).
+            Directory.CreateDirectory(CharacterIcons.Dir);
+            _web.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                CharacterIcons.VirtualHost, CharacterIcons.Dir, CoreWebView2HostResourceAccessKind.Allow);
 
             var htmlPath = Path.Combine(AppContext.BaseDirectory, "Assets", "main.html");
             var found = File.Exists(htmlPath);
@@ -136,6 +146,8 @@ internal sealed class MainWindow : Form
             focusGoal = snapshot.FocusGoal,
             matches = snapshot.Matches,
             gamePlans = snapshot.GamePlans,
+            characterIcons = _icons.UrlMap(
+                snapshot.Matches.SelectMany(m => new[] { m.MyCharacter, m.OpponentCharacter })),
             recording = new
             {
                 isRecording = _recorder.IsRecording,

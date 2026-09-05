@@ -30,6 +30,17 @@ textarea{resize:vertical;font-family:Sora,sans-serif}
 .chip.win{background:rgba(61,220,132,.14);color:#7fe8ad}
 .chip.loss{background:rgba(255,109,109,.14);color:#ff8f8f}
 .dot{width:7px;height:7px;border-radius:50%;flex:none}
+.char-icon{width:14px;height:14px;border-radius:3px;object-fit:cover;flex:none;display:block}
+
+/* custom select (character filter — native <option> can't show images) */
+.cselect{flex:1;min-width:0;position:relative}
+.cselect-btn{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:8px;color:#e8ebf5;font:400 11px Sora,sans-serif;padding:6px 7px;cursor:pointer;white-space:nowrap;overflow:hidden}
+.cselect.active .cselect-btn{border-color:rgba(69,196,255,.6);background:rgba(69,196,255,.1)}
+.cselect-btn .caret{margin-left:auto;color:#6d7694;font-size:9px;flex:none}
+.cselect-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:20;background:#181c30;border:1px solid rgba(255,255,255,.16);border-radius:8px;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.cselect-opt{display:flex;align-items:center;gap:6px;padding:6px 8px;font:400 11px Sora,sans-serif;cursor:pointer;white-space:nowrap;overflow:hidden}
+.cselect-opt:hover{background:rgba(255,255,255,.06)}
+.cselect-opt.selected{background:rgba(69,196,255,.12)}
 
 /* ---- sidebar ---- */
 .sidebar{width:312px;flex:none;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.07);background:#0c1020;min-height:0}
@@ -171,6 +182,12 @@ function fmtDate(iso) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + time;
 }
 function initial(name) { return (name || '?').trim()[0]?.toUpperCase() || '?'; }
+// Stock icon for a character, if the app has one cached; falls back to
+// text-only silently (icon may still be downloading, or the fetch 404'd).
+function charIcon(name) {
+  const url = S.data && S.data.characterIcons && S.data.characterIcons[name];
+  return url ? `<img class="char-icon" src="${esc(url)}" alt="" onerror="this.remove()">` : '';
+}
 function resultLabel(m) {
   if (!m.result) return null;
   return { text: `${m.result} ${m.gamesWon}–${m.gamesLost}`, cls: m.result === 'W' ? 'win' : 'loss' };
@@ -231,11 +248,19 @@ function wireCommon() {
   if (filterEl) filterEl.addEventListener('input', () => { ui.filter = filterEl.value; render(); });
   const stageEl = document.getElementById('filterStage');
   if (stageEl) stageEl.addEventListener('change', () => { ui.filterStage = stageEl.value; render(); });
-  const charEl = document.getElementById('filterCharacter');
-  if (charEl) charEl.addEventListener('change', () => { ui.filterCharacter = charEl.value; render(); });
 }
 
-const ui = { filter: '', filterStage: '', filterCharacter: '', selectedMatchId: null, activeTags: [], editingNoteId: null, editingTags: [],
+// Close the character-filter dropdown on any click outside it. Registered
+// once; the re-rendered DOM is detached but keeps its ancestry, so closest()
+// still resolves for the click that opened it.
+document.addEventListener('click', e => {
+  if (ui.charFilterOpen && !e.target.closest('#filterCharacterBox')) {
+    ui.charFilterOpen = false;
+    render();
+  }
+});
+
+const ui = { filter: '', filterStage: '', filterCharacter: '', charFilterOpen: false, selectedMatchId: null, activeTags: [], editingNoteId: null, editingTags: [],
   composerGame: null, editingGame: null }; // composerGame null = auto (live) / whole-match (vod)
 
 // ================= LIBRARY (turn 2a) =================
@@ -290,10 +315,7 @@ function renderLibrary(s) {
           <option value="">Stage: any</option>
           ${allStages.map(st => `<option value="${esc(st)}" ${ui.filterStage === st ? 'selected' : ''}>${esc(st)}</option>`).join('')}
         </select>
-        <select id="filterCharacter" class="${ui.filterCharacter ? 'active' : ''}">
-          <option value="">Character: any</option>
-          ${allCharacters.map(c => `<option value="${esc(c)}" ${ui.filterCharacter === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}
-        </select>
+        ${charFilterSelect(allCharacters)}
       </div>
     </div>
     <div class="match-list">
@@ -306,6 +328,19 @@ function renderLibrary(s) {
   </div>
   <div class="main">${selected ? matchDetail(selected, s) : `<div class="empty">Select a match to see notes and scouting.</div>`}</div>
   `;
+}
+
+function charFilterSelect(allCharacters) {
+  return `
+  <div class="cselect ${ui.filterCharacter ? 'active' : ''}" id="filterCharacterBox">
+    <div class="cselect-btn" data-click="toggleCharFilter">
+      ${ui.filterCharacter ? charIcon(ui.filterCharacter) + esc(ui.filterCharacter) : 'Character: any'}<span class="caret">▾</span>
+    </div>
+    ${ui.charFilterOpen ? `<div class="cselect-menu">
+      <div class="cselect-opt ${ui.filterCharacter ? '' : 'selected'}" data-click="pickCharFilter" data-arg="">Character: any</div>
+      ${allCharacters.map(c => `<div class="cselect-opt ${ui.filterCharacter === c ? 'selected' : ''}" data-click="pickCharFilter" data-arg="${esc(c)}">${charIcon(c)}${esc(c)}</div>`).join('')}
+    </div>` : ''}
+  </div>`;
 }
 
 function matchRow(m, s, selected) {
@@ -342,8 +377,8 @@ function matchDetail(m, s) {
     <div class="detail-chips">
       ${stages}
       <span class="editable-chip" data-click="editMeta" data-arg="${m.id}">edit result / stages / characters</span>
-      ${m.myCharacter ? `<span class="chip" style="background:rgba(255,77,148,.14);color:#ff9dc4">${esc(m.myCharacter)}</span>` : ''}
-      ${m.opponentCharacter ? `<span class="chip" style="background:rgba(139,108,255,.16);color:#c3b3ff">${esc(m.opponentCharacter)}</span>` : ''}
+      ${m.myCharacter ? `<span class="chip" style="background:rgba(255,77,148,.14);color:#ff9dc4">${charIcon(m.myCharacter)}${esc(m.myCharacter)}</span>` : ''}
+      ${m.opponentCharacter ? `<span class="chip" style="background:rgba(139,108,255,.16);color:#c3b3ff">${charIcon(m.opponentCharacter)}${esc(m.opponentCharacter)}</span>` : ''}
     </div>
     <div id="metaEditor-${m.id}"></div>
   </div>
@@ -635,8 +670,8 @@ function renderLive(s) {
         <div class="muted" style="font-size:${overlay ? '10px' : '11px'}">${past.length === 0 ? 'first recorded match against this player' : `${past.length} recorded match${past.length === 1 ? '' : 'es'} before this one`}</div>
         ${m.myCharacter || m.opponentCharacter || (m.stages || []).length ? `
         <div class="row" style="gap:5px;flex-wrap:wrap;margin-top:2px">
-          ${m.myCharacter ? `<span class="chip" style="background:rgba(255,77,148,.14);color:#ff9dc4">${esc(m.myCharacter)}</span>` : ''}
-          ${m.opponentCharacter ? `<span class="chip" style="background:rgba(139,108,255,.16);color:#c3b3ff">${esc(m.opponentCharacter)}</span>` : ''}
+          ${m.myCharacter ? `<span class="chip" style="background:rgba(255,77,148,.14);color:#ff9dc4">${charIcon(m.myCharacter)}${esc(m.myCharacter)}</span>` : ''}
+          ${m.opponentCharacter ? `<span class="chip" style="background:rgba(139,108,255,.16);color:#c3b3ff">${charIcon(m.opponentCharacter)}${esc(m.opponentCharacter)}</span>` : ''}
           ${(m.stages || []).map(st => `<span class="chip" style="background:rgba(255,255,255,.07);color:#a9b2cc">${esc(st)}</span>`).join('')}
         </div>` : ''}
       </div>
@@ -709,6 +744,8 @@ function renderSettings(s) {
 
 const handlers = {
   selectMatch(el, id) { ui.selectedMatchId = id; ui.composerGame = null; render(); },
+  toggleCharFilter() { ui.charFilterOpen = !ui.charFilterOpen; render(); },
+  pickCharFilter(el, c) { ui.filterCharacter = c || ''; ui.charFilterOpen = false; render(); },
   openPlayer(el, opponent) { post({ action: 'navigate', page: 'player', opponent }); },
   openLive() { post({ action: 'navigate', page: 'live' }); },
   openLibrary() { post({ action: 'navigate', page: 'library' }); },

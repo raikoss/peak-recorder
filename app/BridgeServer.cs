@@ -9,16 +9,20 @@ namespace PeakRecorder;
 /// Tiny local HTTP server the browser extension talks to.
 ///   POST /event  {type, matchId?, opponent?, players?}
 ///   GET  /status -> {recording, opponent, matchId}
+///   GET  /icons/needed -> {characters: [...]} (icons the app is missing)
+///   POST /icons  {name, contentType, data(base64)} (extension-fetched icon)
 /// </summary>
 public sealed class BridgeServer : IDisposable
 {
     private readonly HttpListener _listener = new();
     private readonly RecorderService _recorder;
+    private readonly CharacterIcons _icons;
     private readonly CancellationTokenSource _cts = new();
 
-    public BridgeServer(RecorderService recorder, int port)
+    public BridgeServer(RecorderService recorder, CharacterIcons icons, int port)
     {
         _recorder = recorder;
+        _icons = icons;
         _listener.Prefixes.Add($"http://127.0.0.1:{port}/");
     }
 
@@ -109,6 +113,28 @@ public sealed class BridgeServer : IDisposable
                         gameInfo.IsEmpty ? null : gameInfo);
                     await WriteJsonAsync(res, new { accepted = true });
                 }
+            }
+            else if (path == "icons/needed")
+            {
+                await WriteJsonAsync(res, new { characters = _icons.MissingNames() });
+            }
+            else if (path == "icons" && ctx.Request.HttpMethod == "POST")
+            {
+                using var reader = new StreamReader(ctx.Request.InputStream, Encoding.UTF8);
+                var body = JsonNode.Parse(await reader.ReadToEndAsync())?.AsObject();
+                var name = body?["name"]?.GetValue<string>();
+                var data = body?["data"]?.GetValue<string>();
+                var saved = false;
+                if (name != null && data != null)
+                {
+                    try
+                    {
+                        saved = _icons.SaveIcon(name, body!["contentType"]?.GetValue<string>(),
+                            Convert.FromBase64String(data));
+                    }
+                    catch (FormatException) { }
+                }
+                await WriteJsonAsync(res, new { accepted = saved });
             }
             else if (path == "register" && ctx.Request.HttpMethod == "POST")
             {

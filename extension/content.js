@@ -500,6 +500,9 @@
       }
       if (Object.keys(info).length) {
         send("event", { type: "match_update", matchId: id, opponent: state.opponent, ...info });
+        // A newly reported character may need its icon fetched; give the app
+        // a moment to store the update, then sync (hoisted from below).
+        if (info.myCharacter || info.opponentCharacter) setTimeout(syncCharacterIcons, 3000);
       }
     }
 
@@ -600,6 +603,79 @@
 
   checkCompanion();
   setInterval(checkCompanion, 15000);
+
+  // ---- character icon sync ---------------------------------------------------
+  // The app shows a stock icon next to each character name, but it can't
+  // download them itself — the site answers requests from outside the browser
+  // with 429s. From this content script the fetch is same-origin, rides the
+  // browser's cookies and HTTP cache, and looks like normal page traffic, so
+  // the app hands us its missing list and we deliver the images over the
+  // bridge as base64.
+
+  function bridgeRequest(path, method, body) {
+    return new Promise((resolve) => {
+      try {
+        chrome.runtime.sendMessage({ kind: "bridge", path, method, body }, (res) => {
+          if (chrome.runtime.lastError || !res || !res.ok) resolve(null);
+          else resolve(res.data);
+        });
+      } catch {
+        resolve(null);
+      }
+    });
+  }
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result).split(",")[1] || "");
+      fr.onerror = () => reject(fr.error);
+      fr.readAsDataURL(blob);
+    });
+  }
+
+  // The icon files are named after the character with '&' spelled out as
+  // 'And' and every other non-alphanumeric character dropped: "Dr. Mario" ->
+  // "DrMario", "Pyra & Mythra" -> "PyraAndMythra".
+  function iconSlug(name) {
+    return name.replace(/&/g, "And").replace(/[^A-Za-z0-9]/g, "");
+  }
+
+  let iconSyncRunning = false;
+  async function syncCharacterIcons() {
+    if (iconSyncRunning) return;
+    iconSyncRunning = true;
+    try {
+      const needed = await bridgeRequest("icons/needed", "GET");
+      const names = (needed && needed.characters) || [];
+      for (const name of names) {
+        try {
+          const r = await fetch(`/images/characters/icons/${iconSlug(name)}.webp`);
+          if (!r.ok) {
+            log("icon fetch failed:", name, r.status);
+            if (r.status === 429) break; // rate-limited even here; next pass retries
+            continue;
+          }
+          const blob = await r.blob();
+          const res = await bridgeRequest("icons", "POST", {
+            name,
+            contentType: blob.type,
+            data: await blobToBase64(blob),
+          });
+          log("icon delivered:", name, res && res.accepted ? "ok" : "rejected");
+        } catch (e) {
+          log("icon sync error:", name, e);
+        }
+        // One icon at a time with a pause, to stay under the rate limiter.
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    } finally {
+      iconSyncRunning = false;
+    }
+  }
+
+  setTimeout(syncCharacterIcons, 5000);
+  setInterval(syncCharacterIcons, 3 * 60 * 1000);
 
   // ---- diagnostics dump ------------------------------------------------------
 

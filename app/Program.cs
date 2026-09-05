@@ -36,6 +36,7 @@ internal sealed class TrayAppContext : ApplicationContext
     private readonly BridgeServer _bridge;
     private readonly Config _config;
     private readonly Store _store;
+    private readonly CharacterIcons _icons;
     private readonly ToolStripMenuItem _statusItem;
     private Form? _briefing;
     private MainWindow? _mainWindow;
@@ -53,8 +54,9 @@ internal sealed class TrayAppContext : ApplicationContext
         _ = _uiThread.Handle; // force handle creation on the UI thread
         _config = Config.Load();
         _store = Store.Load();
+        _icons = new CharacterIcons(_store);
         _recorder = new RecorderService(_config, _store);
-        _bridge = new BridgeServer(_recorder, _config.BridgePort);
+        _bridge = new BridgeServer(_recorder, _icons, _config.BridgePort);
 
         _statusItem = new ToolStripMenuItem("Idle") { Enabled = false };
         var menu = new ContextMenuStrip();
@@ -163,7 +165,7 @@ internal sealed class TrayAppContext : ApplicationContext
         _briefing = _config.BriefingStyle switch
         {
             "full" => new BriefingWindow(opponent, _store.Snapshot()),
-            "card" => new MainWindow(_config, _store, _recorder, overlay: true),
+            "card" => new MainWindow(_config, _store, _recorder, _icons, overlay: true),
             _ => null,
         };
         _briefing?.Show();
@@ -185,7 +187,7 @@ internal sealed class TrayAppContext : ApplicationContext
             _mainWindow.Activate();
             return;
         }
-        _mainWindow = new MainWindow(_config, _store, _recorder);
+        _mainWindow = new MainWindow(_config, _store, _recorder, _icons);
         _mainWindow.Show();
     }
 
