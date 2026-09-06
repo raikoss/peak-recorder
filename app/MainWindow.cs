@@ -25,6 +25,18 @@ internal sealed class MainWindow : Form
     private readonly WebView2 _web = new() { Dock = DockStyle.Fill };
 
     private string _page = "library";
+
+    /// <summary>Raised when the settings page asks to preview the pre-match briefing.</summary>
+    public event Action? PreviewBriefingRequested;
+
+    /// <summary>Switch the page shown in this window (no-op for the overlay).</summary>
+    public void Navigate(string page)
+    {
+        if (_overlay) return;
+        _page = page;
+        _playerName = null;
+        PushState();
+    }
     private string? _playerName;
     private string? _lastPhase;
 
@@ -160,17 +172,67 @@ internal sealed class MainWindow : Form
                 gamesLost = _recorder.GamesLost,
                 currentGame = _recorder.CurrentGameNumber,
             },
-            config = new
-            {
-                obsExePath = _config.ObsExePath,
-                filenameTemplate = _config.FilenameTemplate,
-                recordingsFolder = _config.RecordingsFolder,
-                deleteOriginalAfterRemux = _config.DeleteOriginalAfterRemux,
-            },
+            config = BuildConfigPayload(),
         };
         var json = JsonSerializer.Serialize(payload, JsonOpts);
         _ = PushStateScriptAsync(json);
     }
+
+    // Everything the settings page shows: the raw config values, their
+    // defaults (for "reset" links), and a few derived facts so the page can
+    // explain what "auto" / "blank" currently resolve to.
+    private object BuildConfigPayload()
+    {
+        var defaults = new Config();
+        var obsOwn = ObsSettings.ReadObsOwn();
+        string? recordingsFolderResolved = null;
+        if (!string.IsNullOrWhiteSpace(_config.RecordingsFolder))
+        {
+            try { recordingsFolderResolved = Path.GetFullPath(Environment.ExpandEnvironmentVariables(_config.RecordingsFolder)); }
+            catch { recordingsFolderResolved = null; }
+        }
+        return new
+        {
+            // recording
+            filenameTemplate = _config.FilenameTemplate,
+            recordingsFolder = _config.RecordingsFolder,
+            recordingsFolderResolved,
+            recordingsFolderExists = recordingsFolderResolved != null && Directory.Exists(recordingsFolderResolved),
+            deleteOriginalAfterRemux = _config.DeleteOriginalAfterRemux,
+            // obs
+            obsExePath = _config.ObsExePath,
+            obsExeFound = File.Exists(_config.ObsExePath),
+            obsLaunchArgs = _config.ObsLaunchArgs,
+            obsWsPort = _config.ObsWsPort,
+            obsWsPassword = _config.ObsWsPassword,
+            obsOwnConfigFound = obsOwn.port != null || obsOwn.authRequired != null,
+            obsOwnPort = obsOwn.port,
+            obsOwnAuthRequired = obsOwn.authRequired,
+            obsOwnServerEnabled = obsOwn.enabled,
+            obsOwnConfigPath = ObsSettings.ConfigPath,
+            // briefing
+            briefingStyle = _config.BriefingStyle,
+            // app
+            bridgePort = _config.BridgePort,
+            bridgePortInUse = StartupBridgePort,
+            configPath = Config.FilePath,
+            logPath = Log.FilePath,
+            dataDir = Config.Dir,
+            defaults = new
+            {
+                filenameTemplate = defaults.FilenameTemplate,
+                obsExePath = defaults.ObsExePath,
+                obsLaunchArgs = defaults.ObsLaunchArgs,
+                bridgePort = defaults.BridgePort,
+                briefingStyle = defaults.BriefingStyle,
+                deleteOriginalAfterRemux = defaults.DeleteOriginalAfterRemux,
+            },
+        };
+    }
+
+    /// <summary>The port the bridge server was actually started on; the
+    /// config value can differ until the app is restarted.</summary>
+    internal static int StartupBridgePort { get; set; }
 
     private async Task PushStateScriptAsync(string json)
     {
@@ -279,13 +341,26 @@ internal sealed class MainWindow : Form
                     break;
 
                 case "saveSettings":
-                    if (msg!["toggleDeleteOriginal"]?.GetValue<bool>() == true)
-                        _config.DeleteOriginalAfterRemux = !_config.DeleteOriginalAfterRemux;
-                    if (msg["filenameTemplate"]?.GetValue<string>() is { } ft) _config.FilenameTemplate = ft;
-                    if (msg["recordingsFolder"]?.GetValue<string>() is { } rf) _config.RecordingsFolder = string.IsNullOrWhiteSpace(rf) ? null : rf;
-                    if (msg["obsExePath"]?.GetValue<string>() is { } oe) _config.ObsExePath = oe;
+                    ApplySettings(msg!);
                     _config.Save();
                     PushState();
+                    break;
+
+                case "previewBriefing":
+                    PreviewBriefingRequested?.Invoke();
+                    break;
+
+                case "browseFolder":
+                    BrowseFolder();
+                    break;
+
+                case "browseObsExe":
+                    BrowseObsExe();
+                    break;
+
+                case "openFolder":
+                    if (msg!["path"]?.GetValue<string>() is { } folder && Directory.Exists(folder))
+                        Process.Start(new ProcessStartInfo("explorer.exe", "\"" + folder + "\"") { UseShellExecute = true });
                     break;
             }
         }
@@ -293,6 +368,81 @@ internal sealed class MainWindow : Form
         {
             Log.Write($"MainWindow message error ({action}): {ex.Message}");
         }
+    }
+
+    // Only keys present in the message are applied, so the page can save a
+    // single field (or a single toggle) without resending everything.
+    private void ApplySettings(JsonObject msg)
+    {
+        var defaults = new Config();
+        if (msg["toggleDeleteOriginal"]?.GetValue<bool>() == true)
+            _config.DeleteOriginalAfterRemux = !_config.DeleteOriginalAfterRemux;
+
+        if (msg["filenameTemplate"]?.GetValue<string>() is { } ft)
+            _config.FilenameTemplate = string.IsNullOrWhiteSpace(ft) ? defaults.FilenameTemplate : ft.Trim();
+        if (msg["recordingsFolder"]?.GetValue<string>() is { } rf)
+            _config.RecordingsFolder = string.IsNullOrWhiteSpace(rf) ? null : rf.Trim();
+
+        if (msg["obsExePath"]?.GetValue<string>() is { } oe)
+            _config.ObsExePath = string.IsNullOrWhiteSpace(oe) ? defaults.ObsExePath : oe.Trim().Trim('"');
+        if (msg["obsLaunchArgs"]?.GetValue<string>() is { } la)
+            _config.ObsLaunchArgs = la.Trim();
+        if (msg.ContainsKey("obsWsPort"))
+            _config.ObsWsPort = ParsePort(msg["obsWsPort"]?.GetValue<string>());
+        if (msg["obsWsPassword"]?.GetValue<string>() is { } pw)
+            _config.ObsWsPassword = pw.Length == 0 ? null : pw;
+
+        if (msg["briefingStyle"]?.GetValue<string>() is { } bs && bs is "card" or "full" or "off")
+            _config.BriefingStyle = bs;
+
+        if (msg.ContainsKey("bridgePort"))
+            _config.BridgePort = ParsePort(msg["bridgePort"]?.GetValue<string>()) ?? defaults.BridgePort;
+    }
+
+    private static int? ParsePort(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        return int.TryParse(raw.Trim(), out var p) && p is >= 1 and <= 65535 ? p : null;
+    }
+
+    private void BrowseFolder()
+    {
+        using var dlg = new FolderBrowserDialog
+        {
+            Description = "Folder to move finished recordings into",
+            UseDescriptionForTitle = true,
+            ShowNewFolderButton = true,
+        };
+        var current = _config.RecordingsFolder;
+        if (!string.IsNullOrWhiteSpace(current))
+        {
+            try
+            {
+                var expanded = Path.GetFullPath(Environment.ExpandEnvironmentVariables(current));
+                if (Directory.Exists(expanded)) dlg.SelectedPath = expanded;
+            }
+            catch { /* ignore */ }
+        }
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+        _config.RecordingsFolder = dlg.SelectedPath;
+        _config.Save();
+        PushState();
+    }
+
+    private void BrowseObsExe()
+    {
+        using var dlg = new OpenFileDialog
+        {
+            Title = "Locate obs64.exe",
+            Filter = "OBS Studio (obs64.exe)|obs64.exe|Executables (*.exe)|*.exe",
+            CheckFileExists = true,
+        };
+        var dir = Path.GetDirectoryName(_config.ObsExePath);
+        if (dir != null && Directory.Exists(dir)) dlg.InitialDirectory = dir;
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+        _config.ObsExePath = dlg.FileName;
+        _config.Save();
+        PushState();
     }
 
     private void OpenVideo(string matchId)

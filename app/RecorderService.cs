@@ -302,7 +302,7 @@ public sealed class RecorderService : IDisposable
     private void LaunchObs()
     {
         if (!File.Exists(_config.ObsExePath))
-            throw new FileNotFoundException($"OBS not found at {_config.ObsExePath} (set ObsExePath in config.json).");
+            throw new FileNotFoundException($"OBS not found at {_config.ObsExePath} (fix the path under Settings → OBS).");
 
         Log.Write("Launching OBS...");
         Process.Start(new ProcessStartInfo

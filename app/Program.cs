@@ -57,6 +57,7 @@ internal sealed class TrayAppContext : ApplicationContext
         _icons = new CharacterIcons(_store);
         _recorder = new RecorderService(_config, _store);
         _bridge = new BridgeServer(_recorder, _icons, _config.BridgePort);
+        MainWindow.StartupBridgePort = _config.BridgePort;
 
         _statusItem = new ToolStripMenuItem("Idle") { Enabled = false };
         var menu = new ContextMenuStrip();
@@ -69,11 +70,7 @@ internal sealed class TrayAppContext : ApplicationContext
         menu.Items.Add("Stop recording now", null, async (_, _) =>
             await _recorder.HandleEventAsync("manual_stop", null, null, null));
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(BuildBriefingStyleMenu());
-        menu.Items.Add("Preview briefing (test opponent)", null, (_, _) => ShowBriefing("Zetsubing"));
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add("Open config", null, (_, _) => OpenFile(Config.FilePath));
-        menu.Items.Add("Open log", null, (_, _) => OpenFile(Log.FilePath));
+        menu.Items.Add("Settings", null, (_, _) => ShowMainWindow("settings"));
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Exit", null, (_, _) => ExitThread());
 
@@ -110,6 +107,12 @@ internal sealed class TrayAppContext : ApplicationContext
 
         _recorder.MatchFound += opponent => RunOnUiThread(() => ShowBriefing(opponent));
 
+        // Settings can also be edited from the main window; keep the tray in step.
+        _config.Saved += () => RunOnUiThread(() =>
+        {
+            if (_config.BriefingStyle == "off") CloseBriefing();
+        });
+
         _recorder.MatchDismissed += () => RunOnUiThread(CloseBriefing);
 
         try
@@ -126,32 +129,6 @@ internal sealed class TrayAppContext : ApplicationContext
         Log.Write("PeakRecorder started.");
 
         if (Environment.GetEnvironmentVariable("PEAKRECORDER_AUTOOPEN") == "1") ShowMainWindow();
-    }
-
-    private ToolStripMenuItem BuildBriefingStyleMenu()
-    {
-        var root = new ToolStripMenuItem("Pre-match briefing");
-        var options = new (string Value, string Label)[]
-        {
-            ("card", "Floating live window"),
-            ("full", "Full window (pre-match only)"),
-            ("off", "Off"),
-        };
-        ToolStripMenuItem[] items = options.Select(o =>
-        {
-            var item = new ToolStripMenuItem(o.Label) { CheckOnClick = false, Checked = _config.BriefingStyle == o.Value };
-            item.Click += (_, _) =>
-            {
-                _config.BriefingStyle = o.Value;
-                _config.Save();
-                foreach (ToolStripMenuItem other in root.DropDownItems) other.Checked = false;
-                item.Checked = true;
-                if (o.Value == "off") CloseBriefing();
-            };
-            return item;
-        }).ToArray();
-        root.DropDownItems.AddRange(items);
-        return root;
     }
 
     private void RunOnUiThread(Action action)
@@ -179,17 +156,22 @@ internal sealed class TrayAppContext : ApplicationContext
         _briefing = null;
     }
 
-    private void ShowMainWindow()
+    private void ShowMainWindow(string? page = null)
     {
-        if (_mainWindow is { IsDisposed: false })
+        if (_mainWindow is not { IsDisposed: false })
+        {
+            _mainWindow = new MainWindow(_config, _store, _recorder, _icons);
+            // "Preview" on the settings page shows the briefing for a fake opponent.
+            _mainWindow.PreviewBriefingRequested += () => ShowBriefing("Zetsubing");
+            _mainWindow.Show();
+        }
+        else
         {
             _mainWindow.Show();
             _mainWindow.WindowState = FormWindowState.Normal;
             _mainWindow.Activate();
-            return;
         }
-        _mainWindow = new MainWindow(_config, _store, _recorder, _icons);
-        _mainWindow.Show();
+        if (page != null) _mainWindow.Navigate(page);
     }
 
     internal static void OpenFile(string path)

@@ -81,21 +81,21 @@ If you want to check something on the site mid-set, go ahead. The recording keep
 
 ## The main window
 
-Double-click the tray icon (or right-click it and choose **Open PeakRecorder**) to open the main window.
+Double-click the tray icon (or right-click it and choose **Open PeakRecorder**) to open the main window. The tray menu itself is deliberately small: open the app, start or stop a recording by hand, jump to Settings, or exit.
 
 - **Library** – all your recorded sets, newest first. Search by opponent name or note text, or filter by stage and character. Click a set to see its notes, open the video, or fix the result if it was detected wrong.
 - **Live** – while a set is in progress: current score, stage, characters, your game plan, and a box to type notes. Notes typed here are stamped with the time in the recording.
 - **Player page** – click an opponent's name to see every set against them and write your **game plan** for next time.
-- **Settings** – where videos go, how they're named, and where OBS is installed.
+- **Settings** – every option the app has, grouped into Recording (naming, folder), OBS (where it's installed, connection), Pre-match briefing, and App & files (data folder, log, local port). Changes save as you go.
 
 **Notes and tags:** type `#habit`, `#adapt`, `#work-on` or `#tech` anywhere in a note (like `#habit rolls in from ledge`) to tag it, or click the tag buttons. Notes can be attached to a specific game of the set, edited, and deleted. There's also a **weekly focus** box at the top of the library for whatever you're currently working on; it shows up on the pre-match card too.
 
-**Pre-match card:** right-click the tray icon → **Pre-match briefing** to choose between the small always-on-top card, a full-screen version, or turning it off. **Preview briefing** shows you what it looks like without needing a match.
+**Pre-match card:** choose between the small always-on-top card, a full-screen version, or turning it off under **Settings → Pre-match briefing**. The **Preview briefing** button there shows you what it looks like without needing a match.
 
 ## If something isn't working
 
 - **Extension says the app isn't running.** Start `PeakRecorder.exe`. When you're on smashthepeak.eu without it running, a banner appears at the top of the page with a **Start recorder app** button; that button works after you've run PeakRecorder manually at least once.
-- **Recording didn't start.** Right-click the tray icon → **Open log** and look at the last lines. The extension popup also has manual **Start recording / Stop recording** buttons as a backup, and so does the tray menu.
+- **Recording didn't start.** Open **Settings → App & files → Open log** and look at the last lines. The extension popup also has manual **Start recording / Stop recording** buttons as a backup, and so does the tray menu.
 - **Extension icon doesn't change colour.** Some browsers (Arc in particular) don't show icon changes. The banner on the page and the tray icon are the reliable signals.
 - **Log says it couldn't connect to OBS.** PeakRecorder can only turn on OBS's built-in WebSocket server while OBS is closed. If OBS was already open the very first time you used the recorder, close OBS and let PeakRecorder launch it once. After that it works either way.
 - **The site changed and detection broke.** Turn on **Debug logging** in the extension popup and click **Dump page for debugging**, then open an issue and attach the dump from `%APPDATA%\PeakRecorder\dumps\`.
@@ -106,7 +106,7 @@ Everything the app saves is in `%APPDATA%\PeakRecorder\` (paste that into the Ex
 
 | File          | What it is                                                                                |
 | ------------- | ----------------------------------------------------------------------------------------- |
-| `config.json` | Settings. Most can be changed from the Settings page; open the file directly for the rest |
+| `config.json` | Settings. Everything in it can be changed from the Settings page in the app             |
 | `data.db`     | Your match history, notes and game plans. Back this up if you care about it               |
 | `log.txt`     | The log, useful when something goes wrong                                                 |
 | `icons\`      | Cached character icons                                                                    |
@@ -114,6 +114,8 @@ Everything the app saves is in `%APPDATA%\PeakRecorder\` (paste that into the Ex
 Your videos are wherever OBS normally saves recordings, unless you set a **Recordings folder** in Settings.
 
 ### All settings
+
+All of these are on the Settings page in the app; the names below are what they're called in `config.json` if you ever open it directly.
 
 | Setting                       | Default                                           | What it does                                                                    |
 | ----------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------- |
@@ -124,7 +126,7 @@ Your videos are wherever OBS normally saves recordings, unless you set a **Recor
 | `ObsExePath`                  | `C:\Program Files\obs-studio\bin\64bit\obs64.exe` | Change if OBS is installed somewhere else                                       |
 | `ObsLaunchArgs`               | `--disable-shutdown-check --minimize-to-tray`     | Options used when PeakRecorder starts OBS                                       |
 | `ObsWsPort` / `ObsWsPassword` | empty                                             | Normally read from OBS automatically; only set these if that fails              |
-| `BridgePort`                  | `8123`                                            | Local port the extension uses to talk to the app                                |
+| `BridgePort`                  | `8123`                                            | Local port the extension uses to talk to the app. Needs an app restart to apply |
 
 ## Good to know
 

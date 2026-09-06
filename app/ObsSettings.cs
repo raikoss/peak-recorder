@@ -33,6 +33,27 @@ public static class ObsSettings
     }
 
     /// <summary>
+    /// What OBS's own websocket config says, for showing the user what the
+    /// "auto" setting resolves to. Nulls when the file is missing/unreadable.
+    /// </summary>
+    public static (int? port, bool? authRequired, bool enabled) ReadObsOwn()
+    {
+        try
+        {
+            if (!File.Exists(ConfigPath)) return (null, null, false);
+            var json = JsonNode.Parse(File.ReadAllText(ConfigPath));
+            return (
+                json?["server_port"]?.GetValue<int>(),
+                json?["auth_required"]?.GetValue<bool>(),
+                json?["server_enabled"]?.GetValue<bool>() ?? false);
+        }
+        catch
+        {
+            return (null, null, false);
+        }
+    }
+
+    /// <summary>
     /// Flips server_enabled to true in OBS's websocket config. Only safe while
     /// OBS is closed (OBS overwrites the file on exit).
     /// </summary>

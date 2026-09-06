@@ -38,6 +38,10 @@ public class Config
     /// "off" = disabled.</summary>
     public string BriefingStyle { get; set; } = "card";
 
+    /// <summary>Raised after every successful <see cref="Save"/> so open UI
+    /// (tray menu, briefing window) can react to edits made elsewhere.</summary>
+    public event Action? Saved;
+
     public static string Dir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PeakRecorder");
 
@@ -75,6 +79,7 @@ public class Config
     {
         Directory.CreateDirectory(Dir);
         File.WriteAllText(FilePath, JsonSerializer.Serialize(this, JsonOpts));
+        Saved?.Invoke();
     }
 }
 

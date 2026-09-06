@@ -19,8 +19,9 @@ a,.link{color:#45c4ff;cursor:pointer;text-decoration:none}
 .btn:hover{background:rgba(255,255,255,.06)}
 .btn.primary{background:#45c4ff;color:#062033;border-color:transparent}
 .btn.danger{border-color:rgba(255,109,109,.4);color:#ff8f8f}
-input[type=text],textarea{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#e8ebf5;font:400 12px Sora,sans-serif;padding:8px 10px;outline:none}
-input[type=text]:focus,textarea:focus{border-color:rgba(69,196,255,.5)}
+input[type=text],input[type=password],textarea{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#e8ebf5;font:400 12px Sora,sans-serif;padding:8px 10px;outline:none}
+input[type=text]:focus,input[type=password]:focus,textarea:focus{border-color:rgba(69,196,255,.5)}
+input.invalid{border-color:rgba(255,109,109,.6)}
 textarea{resize:vertical;font-family:Sora,sans-serif}
 .chip{border-radius:6px;padding:2px 8px;font:600 10px Sora,sans-serif;display:inline-flex;align-items:center;gap:4px}
 .chip.habit{background:rgba(255,77,148,.14);color:#ff9dc4}
@@ -126,16 +127,46 @@ textarea{resize:vertical;font-family:Sora,sans-serif}
 /* ---- settings ---- */
 .settings-body{flex:1;display:flex;min-height:0}
 .settings-nav{width:170px;flex:none;padding:16px 12px;display:flex;flex-direction:column;gap:2px;border-right:1px solid rgba(255,255,255,.07)}
-.settings-nav div{padding:7px 10px;border-radius:8px;font:400 12px Sora,sans-serif;color:#8a93ad}
+.settings-nav div{padding:7px 10px;border-radius:8px;font:400 12px Sora,sans-serif;color:#8a93ad;cursor:pointer}
+.settings-nav div:hover{background:rgba(255,255,255,.04)}
 .settings-nav div.active{background:rgba(69,196,255,.12);font-weight:600;color:#7dd7ff}
-.settings-main{flex:1;padding:18px 24px;display:flex;flex-direction:column;gap:16px;overflow-y:auto}
+.settings-main{flex:1;padding:18px 24px 24px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;max-width:720px}
+.settings-title{font:700 15px Sora,sans-serif}
+.settings-intro{font:400 11.5px/1.5 Sora,sans-serif;color:#8a93ad;margin-top:-10px}
 .field{display:flex;flex-direction:column;gap:6px}
-.field-label{font:600 12.5px Sora,sans-serif}
-.field-hint{font:400 10.5px Sora,sans-serif;color:#6d7694}
-.field input[type=text]{width:100%}
-.toggle{display:flex;align-items:center;gap:12px}
-.toggle-track{width:34px;height:19px;border-radius:10px;position:relative;flex:none;cursor:pointer}
+.field-label{font:600 12.5px Sora,sans-serif;display:flex;align-items:baseline;gap:8px}
+.field-label .reset{margin-left:auto;font:400 10.5px Sora,sans-serif;color:#6d7694;cursor:pointer}
+.field-label .reset:hover{color:#45c4ff}
+.field-hint{font:400 10.5px/1.5 Sora,sans-serif;color:#6d7694}
+.field-hint code{font:400 10.5px ui-monospace,Consolas,monospace;background:rgba(255,255,255,.06);border-radius:4px;padding:1px 4px;color:#a9b2cc}
+.field-hint.ok{color:#7fe8ad}
+.field-hint.warn{color:#ffd166}
+.field-hint.bad{color:#ff8f8f}
+.field input[type=text],.field input[type=password]{width:100%}
+.field .row input[type=text],.field .row input[type=password]{flex:1;min-width:0;width:auto}
+.field .row .btn{flex:none}
+.toggle{display:flex;align-items:center;gap:12px;cursor:pointer}
+.toggle-track{width:34px;height:19px;border-radius:10px;position:relative;flex:none}
 .toggle-thumb{position:absolute;top:2px;width:15px;height:15px;border-radius:50%;background:#fff}
+.opt-cards{display:flex;flex-direction:column;gap:8px}
+.opt-card{display:flex;gap:12px;align-items:flex-start;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;cursor:pointer}
+.opt-card:hover{background:rgba(255,255,255,.06)}
+.opt-card.selected{border-color:rgba(69,196,255,.6);background:rgba(69,196,255,.08)}
+.opt-radio{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.3);flex:none;margin-top:2px;position:relative}
+.opt-card.selected .opt-radio{border-color:#45c4ff}
+.opt-card.selected .opt-radio::after{content:'';position:absolute;inset:2px;border-radius:50%;background:#45c4ff}
+.opt-title{font:600 12px Sora,sans-serif}
+.opt-desc{font:400 10.5px/1.5 Sora,sans-serif;color:#8a93ad;margin-top:2px}
+.callout{background:rgba(255,209,102,.08);border:1px solid rgba(255,209,102,.3);border-radius:10px;padding:10px 12px;font:400 11px/1.5 Sora,sans-serif;color:#ffd166}
+.callout.info{background:rgba(69,196,255,.06);border-color:rgba(69,196,255,.25);color:#a9b2cc}
+.path-box{display:flex;flex-direction:column;gap:6px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px 12px}
+.path-row{display:flex;align-items:center;gap:10px;font:400 11px Sora,sans-serif}
+.path-row .lbl{color:#8a93ad;width:110px;flex:none}
+.path-row .val{color:#c6cde0;font:400 10.5px ui-monospace,Consolas,monospace;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.path-row .link{font-size:11px;flex:none}
+.saved-pill{margin-left:auto;font:600 10.5px Sora,sans-serif;color:#7fe8ad;opacity:0;transition:opacity .25s}
+.saved-pill.show{opacity:1}
+.section-sep{height:1px;background:rgba(255,255,255,.07)}
 </style>
 </head>
 <body>
@@ -247,6 +278,9 @@ function wireCommon() {
   document.querySelectorAll('[data-blur]').forEach(el => {
     el.addEventListener('blur', () => handlers[el.dataset.blur] && handlers[el.dataset.blur](el));
   });
+  document.querySelectorAll('[data-input]').forEach(el => {
+    el.addEventListener('input', () => handlers[el.dataset.input] && handlers[el.dataset.input](el));
+  });
   const filterEl = document.getElementById('filterInput');
   if (filterEl) filterEl.addEventListener('input', () => { ui.filter = filterEl.value; render(); });
   const stageEl = document.getElementById('filterStage');
@@ -264,7 +298,8 @@ document.addEventListener('click', e => {
 });
 
 const ui = { filter: '', filterStage: '', filterCharacter: '', charFilterOpen: false, selectedMatchId: null, activeTags: [], editingNoteId: null, editingTags: [],
-  composerGame: null, editingGame: null }; // composerGame null = auto (live) / whole-match (vod)
+  composerGame: null, editingGame: null, // composerGame null = auto (live) / whole-match (vod)
+  settingsTab: 'recording', settingsSaved: false, showWsPassword: false };
 
 // ================= LIBRARY (turn 2a) =================
 
@@ -700,52 +735,202 @@ function renderLive(s) {
 
 // ================= SETTINGS (turn 2c) =================
 
+const SETTINGS_TABS = [
+  { id: 'recording', label: 'Recording' },
+  { id: 'obs', label: 'OBS' },
+  { id: 'briefing', label: 'Pre-match briefing' },
+  { id: 'app', label: 'App & files' },
+  { id: 'extension', label: 'Extension' },
+];
+
+function filenamePreview(template) {
+  const now = new Date();
+  const pad = n => n.toString().padStart(2, '0');
+  const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const time = `${pad(now.getHours())}-${pad(now.getMinutes())}`;
+  return (template || '')
+    .replaceAll('{date}', date).replaceAll('{time}', time)
+    .replaceAll('{opponent}', 'Zetsubing').replaceAll('{matchId}', '48213') + '.mkv';
+}
+
+function resetLink(key, value) {
+  return `<span class="reset" data-click="resetSetting" data-arg="${esc(key)}" title="Reset to default: ${esc(value)}">reset</span>`;
+}
+
 function renderSettings(s) {
   const c = s.config;
+  const tab = SETTINGS_TABS.find(t => t.id === ui.settingsTab) ? ui.settingsTab : 'recording';
+  const nav = SETTINGS_TABS.map(t =>
+    `<div class="${t.id === tab ? 'active' : ''}" data-click="settingsTab" data-arg="${t.id}">${t.label}</div>`).join('');
+  const body = {
+    recording: renderSettingsRecording,
+    obs: renderSettingsObs,
+    briefing: renderSettingsBriefing,
+    app: renderSettingsApp,
+    extension: renderSettingsExtension,
+  }[tab](c, s);
   return `
   <div class="main" style="width:100%">
     <div class="player-hdr">
       <span class="link" data-click="openLibrary">← Library</span><span class="muted">/</span><span style="font:600 12px Sora,sans-serif;color:#a9b2cc">Settings</span>
+      <span class="saved-pill ${ui.settingsSaved ? 'show' : ''}">✓ Saved</span>
     </div>
     <div class="settings-body">
-      <div class="settings-nav">
-        <div class="active">Recording</div>
-        <div title="Configured via the browser extension popup">Extension</div>
-      </div>
-      <div class="settings-main">
-        <div class="field">
-          <div class="field-label">Filename template</div>
-          <input id="cfgFilenameTemplate" type="text" value="${esc(c.filenameTemplate)}" data-blur="saveSettings">
-          <div class="field-hint">insert: {date} {time} {opponent} {matchId}</div>
-        </div>
-        <div class="field">
-          <div class="field-label">Recordings folder</div>
-          <div class="row" style="gap:8px">
-            <input id="cfgRecordingsFolder" type="text" style="flex:1" value="${esc(c.recordingsFolder || '')}" placeholder="(leave blank to use OBS's own output folder)" data-blur="saveSettings">
-          </div>
-          <div class="field-hint">Finished recordings are moved here after OBS stops.</div>
-        </div>
-        <div class="field">
-          <div class="field-label">OBS executable path</div>
-          <input id="cfgObsExePath" type="text" value="${esc(c.obsExePath)}" data-blur="saveSettings">
-        </div>
-        <div class="toggle" data-click="toggleDeleteOriginal">
-          <div class="toggle-track" style="background:${c.deleteOriginalAfterRemux ? '#45c4ff' : 'rgba(255,255,255,.14)'}">
-            <div class="toggle-thumb" style="${c.deleteOriginalAfterRemux ? 'right:2px' : 'left:2px'}"></div>
-          </div>
-          <div class="col"><span style="font:600 12px Sora,sans-serif">Delete original after remux</span><span class="field-hint">Remove the .mkv once the renamed .mp4 looks complete</span></div>
-        </div>
-        <div class="row" style="margin-top:auto;gap:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px 12px">
-          <span class="muted" style="font-size:11px">%APPDATA%\\PeakRecorder\\config.json</span>
-          <span class="link" style="margin-left:auto;font-size:11px" data-click="openConfig">Open raw</span>
-          <span class="link" style="font-size:11px" data-click="openLog">Open log</span>
-        </div>
-      </div>
+      <div class="settings-nav">${nav}</div>
+      <div class="settings-main">${body}</div>
     </div>
   </div>`;
 }
 
+function renderSettingsRecording(c) {
+  const folderHint = !c.recordingsFolder
+    ? `<div class="field-hint">Blank = recordings stay in OBS's own output folder (they are still renamed there).</div>`
+    : c.recordingsFolderExists
+      ? `<div class="field-hint ok">✓ Folder exists: <code>${esc(c.recordingsFolderResolved)}</code></div>`
+      : c.recordingsFolderResolved
+        ? `<div class="field-hint warn">Folder doesn't exist yet: <code>${esc(c.recordingsFolderResolved)}</code>. It will be created when the first recording finishes.</div>`
+        : `<div class="field-hint bad">This doesn't look like a valid path. Recordings will stay in OBS's output folder.</div>`;
+  return `
+    <div class="settings-title">Recording</div>
+    <div class="settings-intro">How finished recordings are named and where they end up. Changes apply to the next set.</div>
+    <div class="field">
+      <div class="field-label">Filename template ${resetLink('filenameTemplate', c.defaults.filenameTemplate)}</div>
+      <input id="cfgFilenameTemplate" type="text" value="${esc(c.filenameTemplate)}" data-blur="saveSettings" data-enter="blurField" data-input="previewFilename">
+      <div class="field-hint">Placeholders: <code>{date}</code> <code>{time}</code> <code>{opponent}</code> <code>{matchId}</code>. The file extension comes from OBS.</div>
+      <div class="field-hint">Example: <code id="cfgFilenamePreview">${esc(filenamePreview(c.filenameTemplate))}</code></div>
+    </div>
+    <div class="field">
+      <div class="field-label">Recordings folder</div>
+      <div class="row" style="gap:8px">
+        <input id="cfgRecordingsFolder" type="text" value="${esc(c.recordingsFolder || '')}" placeholder="Leave blank to use OBS's own output folder" data-blur="saveSettings" data-enter="blurField">
+        <span class="btn" data-click="browseFolder">Browse…</span>
+        ${c.recordingsFolderExists ? `<span class="btn" data-click="openFolder" data-arg="${esc(c.recordingsFolderResolved)}">Open</span>` : ''}
+      </div>
+      ${folderHint}
+      <div class="field-hint">Finished recordings are moved here after OBS stops. Environment variables like <code>%USERPROFILE%\\Videos\\Smash</code> work.</div>
+    </div>
+    <div class="section-sep"></div>
+    <div class="toggle" data-click="toggleDeleteOriginal">
+      <div class="toggle-track" style="background:${c.deleteOriginalAfterRemux ? '#45c4ff' : 'rgba(255,255,255,.14)'}">
+        <div class="toggle-thumb" style="${c.deleteOriginalAfterRemux ? 'right:2px' : 'left:2px'}"></div>
+      </div>
+      <div class="col"><span style="font:600 12px Sora,sans-serif">Delete original after remux</span><span class="field-hint">If OBS is set to auto-remux (e.g. .mkv → .mp4), remove the original once the remuxed copy is renamed and looks complete. Has no effect when OBS doesn't remux.</span></div>
+    </div>`;
+}
+
+function renderSettingsObs(c) {
+  const exeHint = c.obsExeFound
+    ? `<div class="field-hint ok">✓ Found</div>`
+    : `<div class="field-hint bad">Not found at this path. PeakRecorder can't launch OBS until this points at <code>obs64.exe</code>.</div>`;
+  const autoPort = c.obsOwnConfigFound && c.obsOwnPort ? `auto (OBS uses ${c.obsOwnPort})` : 'auto (4455)';
+  const autoPw = !c.obsOwnConfigFound ? 'auto'
+    : c.obsOwnAuthRequired ? 'auto (read from OBS)' : 'auto (OBS has no password)';
+  let wsStatus;
+  if (!c.obsOwnConfigFound)
+    wsStatus = `<div class="callout info">OBS's websocket config wasn't found at <code>${esc(c.obsOwnConfigPath)}</code>. Start OBS once so it creates it, or fill in the port and password below by hand.</div>`;
+  else if (!c.obsOwnServerEnabled)
+    wsStatus = `<div class="callout">The websocket server is currently disabled in OBS. PeakRecorder turns it on automatically the next time it launches OBS itself; if you start OBS by hand, enable it under <b>Tools → WebSocket Server Settings</b>.</div>`;
+  else
+    wsStatus = `<div class="field-hint ok">✓ OBS's websocket server is enabled${c.obsOwnPort ? ` on port ${c.obsOwnPort}` : ''}${c.obsOwnAuthRequired ? ', with a password' : ', no password'}. Nothing to do here unless the connection fails.</div>`;
+  return `
+    <div class="settings-title">OBS</div>
+    <div class="settings-intro">PeakRecorder launches OBS when a set starts and controls it over obs-websocket. The defaults work for a standard OBS install.</div>
+    <div class="field">
+      <div class="field-label">OBS executable ${resetLink('obsExePath', c.defaults.obsExePath)}</div>
+      <div class="row" style="gap:8px">
+        <input id="cfgObsExePath" type="text" class="${c.obsExeFound ? '' : 'invalid'}" value="${esc(c.obsExePath)}" data-blur="saveSettings" data-enter="blurField">
+        <span class="btn" data-click="browseObsExe">Browse…</span>
+      </div>
+      ${exeHint}
+    </div>
+    <div class="field">
+      <div class="field-label">Launch arguments ${resetLink('obsLaunchArgs', c.defaults.obsLaunchArgs)}</div>
+      <input id="cfgObsLaunchArgs" type="text" value="${esc(c.obsLaunchArgs)}" data-blur="saveSettings" data-enter="blurField">
+      <div class="field-hint">Passed to OBS when PeakRecorder starts it. The defaults start OBS minimized to the tray and skip the "OBS didn't shut down cleanly" dialog. Add e.g. <code>--profile "Switch"</code> or <code>--collection "Smash"</code> to pick a specific profile or scene collection.</div>
+    </div>
+    <div class="section-sep"></div>
+    <div class="field-label">WebSocket connection</div>
+    ${wsStatus}
+    <div class="row" style="gap:14px;align-items:flex-start">
+      <div class="field" style="width:180px;flex:none">
+        <div class="field-label" style="font-size:11.5px">Port</div>
+        <input id="cfgObsWsPort" type="text" inputmode="numeric" value="${c.obsWsPort ?? ''}" placeholder="${esc(autoPort)}" data-blur="saveSettings" data-enter="blurField">
+      </div>
+      <div class="field" style="flex:1">
+        <div class="field-label" style="font-size:11.5px">Password <span class="reset" data-click="toggleWsPassword">${ui.showWsPassword ? 'hide' : 'show'}</span></div>
+        <input id="cfgObsWsPassword" type="${ui.showWsPassword ? 'text' : 'password'}" value="${esc(c.obsWsPassword || '')}" placeholder="${esc(autoPw)}" data-blur="saveSettings" data-enter="blurField" autocomplete="off">
+      </div>
+    </div>
+    <div class="field-hint">Leave both blank to read them from OBS's own config file, which is what you want almost always. Only fill these in if OBS runs on another profile or the automatic detection fails.</div>`;
+}
+
+function renderSettingsBriefing(c) {
+  const opts = [
+    { v: 'card', t: 'Floating live window', d: 'A small always-on-top window appears next to your browser when a match is found, showing your record and game plan against the opponent. It stays open through the set so you can jot notes without alt-tabbing.' },
+    { v: 'full', t: 'Full window (pre-match only)', d: 'A full-size briefing window opens when a match is found and closes by itself as soon as game 1 starts.' },
+    { v: 'off', t: 'Off', d: 'No pop-up. Everything is still recorded and saved; open PeakRecorder yourself to see the live page.' },
+  ];
+  return `
+    <div class="settings-title">Pre-match briefing</div>
+    <div class="settings-intro">What pops up when the extension spots a new match on smashthepeak.eu. Takes effect on the next match.</div>
+    <div class="opt-cards">
+      ${opts.map(o => `
+      <div class="opt-card ${c.briefingStyle === o.v ? 'selected' : ''}" data-click="setBriefingStyle" data-arg="${o.v}">
+        <div class="opt-radio"></div>
+        <div class="col"><div class="opt-title">${o.t}</div><div class="opt-desc">${o.d}</div></div>
+      </div>`).join('')}
+    </div>
+    ${c.briefingStyle !== 'off' ? `
+    <div class="row" style="gap:10px">
+      <span class="btn" data-click="previewBriefing">Preview briefing</span>
+      <span class="field-hint">Shows the current style with a made-up opponent, so you can see it without waiting for a match.</span>
+    </div>` : ''}`;
+}
+
+function renderSettingsApp(c) {
+  const restart = c.bridgePort !== c.bridgePortInUse
+    ? `<div class="callout">Currently listening on port ${c.bridgePortInUse}. The new port takes effect after you restart PeakRecorder (tray icon → Exit, then start it again).</div>`
+    : '';
+  const extWarn = c.bridgePort !== c.defaults.bridgePort
+    ? `<div class="callout">The Chrome extension is built to talk to port ${c.defaults.bridgePort}. With a different port here, the extension won't find the app unless you also edit <code>BRIDGE_BASE</code> in the extension's <code>background.js</code> and reload it.</div>`
+    : '';
+  return `
+    <div class="settings-title">App &amp; files</div>
+    <div class="settings-intro">Where PeakRecorder keeps its data, plus the one knob you should almost never need.</div>
+    <div class="path-box">
+      <div class="path-row"><span class="lbl">Data folder</span><span class="val" title="${esc(c.dataDir)}">${esc(c.dataDir)}</span><span class="link" data-click="openFolder" data-arg="${esc(c.dataDir)}">Open folder</span></div>
+      <div class="path-row"><span class="lbl">Settings file</span><span class="val" title="${esc(c.configPath)}">${esc(c.configPath)}</span><span class="link" data-click="openConfig">Open raw</span></div>
+      <div class="path-row"><span class="lbl">Log</span><span class="val" title="${esc(c.logPath)}">${esc(c.logPath)}</span><span class="link" data-click="openLog">Open log</span></div>
+    </div>
+    <div class="field-hint">Match history and notes live in the data folder too. Back it up if you care about them. Editing the raw settings file works, but PeakRecorder only re-reads it on start.</div>
+    <div class="section-sep"></div>
+    <div class="field">
+      <div class="field-label">Local server port ${resetLink('bridgePort', c.defaults.bridgePort)}</div>
+      <input id="cfgBridgePort" type="text" inputmode="numeric" style="width:180px" value="${c.bridgePort}" data-blur="saveSettings" data-enter="blurField">
+      <div class="field-hint">The port the browser extension uses to reach this app on your own machine. Only change it if something else on your PC already uses ${c.defaults.bridgePort}.</div>
+      ${restart}${extWarn}
+    </div>`;
+}
+
+function renderSettingsExtension(c) {
+  return `
+    <div class="settings-title">Chrome extension</div>
+    <div class="settings-intro">The extension has no settings of its own; it just watches the match page and talks to this app.</div>
+    <div class="callout info">
+      Click the <b>Smash the Peak Recorder</b> icon in Chrome's toolbar to see whether it is connected to the app. If it says the app isn't running, make sure PeakRecorder is in the tray and that the local server port under <span class="link" data-click="settingsTab" data-arg="app">App &amp; files</span> is ${c.defaults.bridgePort}.
+    </div>
+    <div class="field-hint">To update or reinstall the extension: open <code>chrome://extensions</code>, turn on Developer mode, and use <b>Load unpacked</b> on the <code>extension</code> folder. See the README for the full walkthrough.</div>`;
+}
+
 // ================= handlers =================
+
+let savedTimer = null;
+function postSettings(fields) {
+  post({ action: 'saveSettings', ...fields });
+  ui.settingsSaved = true;
+  clearTimeout(savedTimer);
+  savedTimer = setTimeout(() => { ui.settingsSaved = false; if (S.data && S.data.page === 'settings') render(); }, 1800);
+}
 
 const handlers = {
   selectMatch(el, id) { ui.selectedMatchId = id; ui.composerGame = null; render(); },
@@ -860,17 +1045,39 @@ const handlers = {
     const opponent = S.data.page === 'live' ? S.data.recording.opponent : S.data.playerName;
     if (opponent) post({ action: 'setGamePlan', opponent, text: el.value });
   },
-  saveSettings() {
-    post({
-      action: 'saveSettings',
-      filenameTemplate: document.getElementById('cfgFilenameTemplate').value,
-      recordingsFolder: document.getElementById('cfgRecordingsFolder').value,
-      obsExePath: document.getElementById('cfgObsExePath').value,
-    });
+  // Each settings input saves itself on blur. Only the field that lost
+  // focus is sent, so a stale value in another tab can never overwrite a
+  // newer one, and the C# side ignores keys it doesn't receive.
+  saveSettings(el) {
+    const keys = {
+      cfgFilenameTemplate: 'filenameTemplate', cfgRecordingsFolder: 'recordingsFolder',
+      cfgObsExePath: 'obsExePath', cfgObsLaunchArgs: 'obsLaunchArgs',
+      cfgObsWsPort: 'obsWsPort', cfgObsWsPassword: 'obsWsPassword', cfgBridgePort: 'bridgePort',
+    };
+    const key = el && keys[el.id];
+    if (!key) return;
+    const current = S.data.config[key];
+    const before = current == null ? '' : String(current);
+    if (el.value === before) return; // nothing changed; skip the save + re-render
+    postSettings({ [key]: el.value });
   },
-  toggleDeleteOriginal() {
-    post({ action: 'saveSettings', toggleDeleteOriginal: true });
+  blurField(el) { el.blur(); },
+  previewFilename(el) {
+    const out = document.getElementById('cfgFilenamePreview');
+    if (out) out.textContent = filenamePreview(el.value);
   },
+  toggleDeleteOriginal() { postSettings({ toggleDeleteOriginal: true }); },
+  setBriefingStyle(el, style) { if (style !== S.data.config.briefingStyle) postSettings({ briefingStyle: style }); },
+  resetSetting(el, key) {
+    const def = S.data.config.defaults[key];
+    if (def !== undefined) postSettings({ [key]: String(def) });
+  },
+  settingsTab(el, id) { ui.settingsTab = id; render(); },
+  toggleWsPassword() { ui.showWsPassword = !ui.showWsPassword; render(); },
+  previewBriefing() { post({ action: 'previewBriefing' }); },
+  browseFolder() { post({ action: 'browseFolder' }); },
+  browseObsExe() { post({ action: 'browseObsExe' }); },
+  openFolder(el, path) { post({ action: 'openFolder', path }); },
 };
 </script>
 </body>
