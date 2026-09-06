@@ -254,7 +254,18 @@ function render() {
     else if (s.page === 'live') app.innerHTML = renderLive(s);
     else app.innerHTML = renderLibrary(s);
     const list = app.querySelector('.match-list');
-    if (list) list.scrollTop = listScroll;
+    if (list) {
+      list.scrollTop = listScroll;
+      // After a jump from another page, centre the selected match in the list.
+      if (ui.revealSelected) {
+        ui.revealSelected = false;
+        const row = list.querySelector('.match-row.selected');
+        if (row) {
+          const top = row.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop;
+          list.scrollTop = top - (list.clientHeight - row.offsetHeight) / 2;
+        }
+      }
+    }
     wireCommon();
   });
 }
@@ -297,7 +308,7 @@ document.addEventListener('click', e => {
   }
 });
 
-const ui = { filter: '', filterStage: '', filterCharacter: '', charFilterOpen: false, selectedMatchId: null, activeTags: [], editingNoteId: null, editingTags: [],
+const ui = { filter: '', filterStage: '', filterCharacter: '', charFilterOpen: false, selectedMatchId: null, revealSelected: false, activeTags: [], editingNoteId: null, editingTags: [],
   composerGame: null, editingGame: null, // composerGame null = auto (live) / whole-match (vod)
   settingsTab: 'recording', settingsSaved: false, showWsPassword: false };
 
@@ -622,7 +633,7 @@ function renderPlayer(s) {
       <div class="player-col">
         <div class="slabel">SET HISTORY</div>
         ${matches.length === 0 ? '<div class="empty">Nothing recorded yet.</div>' : matches.map(m => `
-          <div class="set-row" data-click="openVideo" data-arg="${m.id}">
+          <div class="set-row" title="open match notes" data-click="openMatch" data-arg="${m.id}">
             <div class="row" style="gap:8px">
               <span style="font:600 11.5px Sora,sans-serif">${fmtDate(m.startedAt)}</span>
               <span class="muted" style="font-size:10.5px">${(m.stages || []).join(', ')}</span>
@@ -942,6 +953,13 @@ const handlers = {
   openSettings() { post({ action: 'navigate', page: 'settings' }); },
   stopRecording() { post({ action: 'stopRecording' }); },
   openVideo(el, id) { post({ action: 'openVideo', matchId: id }); },
+  openMatch(el, id) {
+    // Jump to the library with this match selected. Clear any sidebar filters
+    // so the match can't be hidden from the list it's selected in.
+    ui.selectedMatchId = id; ui.composerGame = null; ui.revealSelected = true;
+    ui.filter = ''; ui.filterStage = ''; ui.filterCharacter = ''; ui.charFilterOpen = false;
+    post({ action: 'navigate', page: 'library' });
+  },
   deleteMatch(el, id) {
     if (ui.selectedMatchId === id) ui.selectedMatchId = null;
     post({ action: 'deleteMatch', matchId: id });
