@@ -20,7 +20,7 @@ It is made of two pieces that talk to each other:
 - Windows 10 or 11
 - [OBS Studio](https://obsproject.com/) set up to capture your Switch, with recording settings the way you like them
 - Google Chrome (or another Chromium browser like Brave, Edge or Arc)
-- The free [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0), only needed once to build the app (there's no installer yet)
+- The free [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0), only if you want to build the app yourself instead of downloading it (see below)
 
 ## Getting started
 
@@ -28,9 +28,12 @@ This will hopefully get easier with time, but for now the installation steps are
 
 ### Simple way - Downloading the built app
 
-1. Download and extract the latest PeakRecorder.zip from https://github.com/raikoss/peak-recorder/releases
-2. Run `app/PeakRecorder.exe` to start the app
-3. See Chrome extension steps below
+1. Go to https://github.com/raikoss/peak-recorder/releases and download the newest release. There are two zips to choose from:
+   - **PeakRecorder-x.y.z.zip** – everything included, no extra installs needed. Pick this one if unsure.
+   - **PeakRecorder-x.y.z-requires-dotnet8.zip** – much smaller, but you need the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) installed first.
+2. Extract the zip somewhere you'll keep it, for example `C:\SmashRecorder`
+3. Run `app\PeakRecorder.exe` to start the app
+4. See Chrome extension steps below, using the `extension` folder from the zip
 
 ### Build the app yourself
 

@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Derive version from tag
+        id: version
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}" -replace '^v', ''
+          "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Release version: $version"
+
+      - name: Publish app (self-contained, no .NET install needed)
+        shell: pwsh
+        run: |
+          dotnet publish app/PeakRecorder.csproj -c Release -r win-x64 --self-contained true `
+            -p:Version=${{ steps.version.outputs.version }} `
+            -o dist/self-contained/app
+
+      - name: Publish app (framework-dependent, requires .NET 8 Desktop Runtime)
+        shell: pwsh
+        run: |
+          dotnet publish app/PeakRecorder.csproj -c Release -r win-x64 --self-contained false `
+            -p:Version=${{ steps.version.outputs.version }} `
+            -o dist/framework-dependent/app
+
+      - name: Copy extension and stamp manifest version
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          foreach ($variant in @("self-contained", "framework-dependent")) {
+            $dest = "dist/$variant/extension"
+            Copy-Item -Recurse extension $dest
+            $manifestPath = "$dest/manifest.json"
+            $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
+            $manifest.version = $version
+            $manifest | ConvertTo-Json -Depth 10 | Set-Content $manifestPath -Encoding utf8
+          }
+          Get-Content dist/self-contained/extension/manifest.json
+
+      - name: Create zips
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          Compress-Archive -Path dist/self-contained/app, dist/self-contained/extension `
+            -DestinationPath "PeakRecorder-$version.zip"
+          Compress-Archive -Path dist/framework-dependent/app, dist/framework-dependent/extension `
+            -DestinationPath "PeakRecorder-$version-requires-dotnet8.zip"
+          Get-ChildItem *.zip | Format-Table Name, @{n="MB";e={[math]::Round($_.Length/1MB,1)}}
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: PeakRecorder ${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          files: |
+            PeakRecorder-${{ steps.version.outputs.version }}.zip
+            PeakRecorder-${{ steps.version.outputs.version }}-requires-dotnet8.zip
+          body: |
+            ## Downloads
+
+            - **PeakRecorder-${{ steps.version.outputs.version }}.zip** – everything included, just extract and run `app/PeakRecorder.exe`. Pick this one if unsure.
+            - **PeakRecorder-${{ steps.version.outputs.version }}-requires-dotnet8.zip** – much smaller, but you need the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) installed first.
+
+            Both zips contain the `extension` folder for Chrome. See the [README](https://github.com/${{ github.repository }}#readme) for setup steps.
