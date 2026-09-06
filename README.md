@@ -26,11 +26,19 @@ It is made of two pieces that talk to each other:
 
 This will hopefully get easier with time, but for now the installation steps are pretty manual. It doesn't take much longer than 10 minutes to set up the first time even if you have to don't have all prerequisites yet.
 
-### Step 1 – Get the files
+### Simple way - Downloading the built app
+
+1. Download and extract the latest PeakRecorder.zip from https://github.com/raikoss/peak-recorder/releases
+2. Run `app/PeakRecorder.exe` to start the app
+3. See Chrome extension steps below
+
+### Build the app yourself
+
+#### Step 1 – Get the files
 
 Click the green **Code** button at the top of this page and choose **Download ZIP**, then unzip it somewhere you'll keep it, for example `C:\SmashRecorder`. (If you use git, cloning works too.)
 
-### Step 2 – Build PeakRecorder
+#### Step 2 – Build PeakRecorder
 
 1. Install the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) if you haven't already (pick the **SDK**, not just the runtime).
 2. Open the unzipped folder, go into the `app` folder, click the address bar at the top of the Explorer window, type `cmd` and press Enter. A black command window opens in that folder.
@@ -46,7 +54,11 @@ Click the green **Code** button at the top of this page and choose **Download ZI
 
 **Tip:** to have it start with Windows, press `Win+R`, type `shell:startup`, press Enter, and drop a shortcut to `PeakRecorder.exe` in the folder that opens. The Chrome extension will warn you if the app is not running though, so this is preference.
 
-### Step 3 – Install the Chrome extension
+### Run the PeakRecorder app
+
+This needs to run once to register with the extension, so that the extension can start the app if the app isn't running. 
+
+### Installing the Chrome extension
 
 1. In Chrome, open `chrome://extensions` (paste it in the address bar).
 2. Turn on **Developer mode** (toggle in the top right).
@@ -55,7 +67,7 @@ Click the green **Code** button at the top of this page and choose **Download ZI
 
 Click the icon: it should say **Companion app connected**. If it says the app isn't running, make sure you started `PeakRecorder.exe` in step 2.
 
-### Step 4 – Play
+### Playing
 
 That's it. Go to smashthepeak.eu and play a set. You don't need to open OBS yourself; PeakRecorder will launch it (minimized to the tray) the first time a set starts.
 

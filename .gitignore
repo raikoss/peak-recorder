@@ -1,3 +1,5 @@
 /app/bin
 /app/obj
 .claude
+release/
+PeakRecorder.zip
