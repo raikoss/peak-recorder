@@ -162,3 +162,7 @@ Technical details for anyone who wants to poke at the code.
   - Stage, characters and running score come from the locked-in stage splash, the character portraits and the completed game rows. Re-picks before a game starts are reported again.
   - Match end is the `<name> won this match.` line or the server chat lines `… won the Match` / `Match concluded`; patterns are anchored so typed chat can't trigger them. The result is derived by comparing the winner to your own name.
   - Leaving the match page mid-set starts a 5 minute grace timer before stopping; the `pagehide` event stops immediately via `sendBeacon`.
+
+## Disclaimers
+
+This project is almost entirely vibe coded with Claude. I probably would have solved this differently if made by hand, but it would probably take months of work for something I probably wouldn't even appreciate. By using Claude I was fortunate to get what I wanted quickly, as it didn't really matter to me how the code looked as it was intended for myself, so keep this in mind in case you try to read through the code. It's probably (likely) not perfect, but it's good enough for me :)
