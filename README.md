@@ -1,7 +1,8 @@
 # Smash the Peak Recorder
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/e6e90e43-655c-4889-b04f-bc840c4569a3" width="100%" alt="Banner">
+  <img src="https://github.com/user-attachments/assets/e6e90e43-655c-4889-b04f-bc840c4569a3" 
+  height="440px" width="100%" alt="Banner">
 </p>
 
 Play your [Smash the Peak](https://www.smashthepeak.eu) ladder sets as usual. This tool records every set with OBS for you, names the video after your opponent, and keeps a match history where you can write notes and game plans for the players you keep running into.
