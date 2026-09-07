@@ -15,15 +15,15 @@ a,.link{color:#45c4ff;cursor:pointer;text-decoration:none}
 .muted{color:#6d7694}
 .row{display:flex;align-items:center}
 .col{display:flex;flex-direction:column}
-.btn{border:1px solid rgba(255,255,255,.16);border-radius:8px;padding:7px 12px;font:600 11.5px Sora,sans-serif;color:#a9b2cc;cursor:pointer;background:transparent}
+.btn{border:1px solid rgba(255,255,255,.16);border-radius:8px;padding:7px 12px;font:600 13px Sora,sans-serif;color:#a9b2cc;cursor:pointer;background:transparent}
 .btn:hover{background:rgba(255,255,255,.06)}
 .btn.primary{background:#45c4ff;color:#062033;border-color:transparent}
 .btn.danger{border-color:rgba(255,109,109,.4);color:#ff8f8f}
-input[type=text],input[type=password],textarea{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#e8ebf5;font:400 12px Sora,sans-serif;padding:8px 10px;outline:none}
+input[type=text],input[type=password],textarea{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#e8ebf5;font:400 13.5px Sora,sans-serif;padding:8px 10px;outline:none}
 input[type=text]:focus,input[type=password]:focus,textarea:focus{border-color:rgba(69,196,255,.5)}
 input.invalid{border-color:rgba(255,109,109,.6)}
 textarea{resize:vertical;font-family:Sora,sans-serif}
-.chip{border-radius:6px;padding:2px 8px;font:600 10px Sora,sans-serif;display:inline-flex;align-items:center;gap:4px}
+.chip{border-radius:6px;padding:2px 8px;font:600 11px Sora,sans-serif;display:inline-flex;align-items:center;gap:4px}
 .chip.habit{background:rgba(255,77,148,.14);color:#ff9dc4}
 .chip.adapt{background:rgba(61,220,132,.12);color:#7fe8ad}
 .chip.workon{background:rgba(255,209,102,.12);color:#ffd166}
@@ -31,32 +31,32 @@ textarea{resize:vertical;font-family:Sora,sans-serif}
 .chip.win{background:rgba(61,220,132,.14);color:#7fe8ad}
 .chip.loss{background:rgba(255,109,109,.14);color:#ff8f8f}
 .dot{width:7px;height:7px;border-radius:50%;flex:none}
-.char-icon{width:14px;height:14px;border-radius:3px;object-fit:cover;flex:none;display:block}
+.char-icon{width:20px;height:20px;border-radius:4px;object-fit:cover;flex:none;display:block}
 
 /* custom select (character filter — native <option> can't show images) */
 .cselect{flex:1;min-width:0;position:relative}
-.cselect-btn{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:8px;color:#e8ebf5;font:400 11px Sora,sans-serif;padding:6px 7px;cursor:pointer;white-space:nowrap;overflow:hidden}
+.cselect-btn{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:8px;color:#e8ebf5;font:400 12.5px Sora,sans-serif;padding:6px 7px;cursor:pointer;white-space:nowrap;overflow:hidden}
 .cselect.active .cselect-btn{border-color:rgba(69,196,255,.6);background:rgba(69,196,255,.1)}
-.cselect-btn .caret{margin-left:auto;color:#6d7694;font-size:9px;flex:none}
+.cselect-btn .caret{margin-left:auto;color:#6d7694;font-size:10px;flex:none}
 .cselect-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:20;background:#181c30;border:1px solid rgba(255,255,255,.16);border-radius:8px;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.5)}
-.cselect-opt{display:flex;align-items:center;gap:6px;padding:6px 8px;font:400 11px Sora,sans-serif;cursor:pointer;white-space:nowrap;overflow:hidden}
+.cselect-opt{display:flex;align-items:center;gap:6px;padding:6px 8px;font:400 12.5px Sora,sans-serif;cursor:pointer;white-space:nowrap;overflow:hidden}
 .cselect-opt:hover{background:rgba(255,255,255,.06)}
 .cselect-opt.selected{background:rgba(69,196,255,.12)}
 
 /* ---- sidebar ---- */
-.sidebar{width:312px;flex:none;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.07);background:#0c1020;min-height:0}
+.sidebar{width:340px;flex:none;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.07);background:#0c1020;min-height:0}
 .brand{padding:14px 14px 10px}
 .brand-row{display:flex;align-items:center;gap:8px}
-.brand-title{font:800 13px Sora,sans-serif;letter-spacing:.03em}
+.brand-title{font:800 14.5px Sora,sans-serif;letter-spacing:.03em}
 .brand-title span{color:#ff4d94}
-.rec-indicator{margin-left:auto;display:flex;align-items:center;gap:5px;font:600 10px Sora,sans-serif;color:#ff9dc4}
+.rec-indicator{margin-left:auto;display:flex;align-items:center;gap:5px;font:600 11px Sora,sans-serif;color:#ff9dc4}
 .focus-box{margin-top:10px;background:linear-gradient(120deg,rgba(255,77,148,.14),rgba(69,196,255,.1));border:1px solid rgba(255,77,148,.3);border-radius:10px;padding:9px 11px;cursor:pointer}
-.focus-label{font:600 9.5px Sora,sans-serif;color:#ff9dc4;letter-spacing:.1em}
-.focus-text{font:600 11.5px/1.45 Sora,sans-serif;color:#f0e6ee;margin-top:3px}
+.focus-label{font:600 10.5px Sora,sans-serif;color:#ff9dc4;letter-spacing:.1em}
+.focus-text{font:600 13px/1.45 Sora,sans-serif;color:#f0e6ee;margin-top:3px}
 .search{margin-top:10px;display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:7px 10px}
-.search input{background:transparent;border:none;flex:1;padding:0;font:400 11.5px Sora,sans-serif;color:#e8ebf5}
+.search input{background:transparent;border:none;flex:1;padding:0;font:400 13px Sora,sans-serif;color:#e8ebf5}
 .filter-row{margin-top:7px;display:flex;gap:7px}
-.filter-row select{color-scheme:dark;flex:1;min-width:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:8px;color:#e8ebf5;font:400 11px Sora,sans-serif;padding:6px 7px;outline:none}
+.filter-row select{color-scheme:dark;flex:1;min-width:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:8px;color:#e8ebf5;font:400 12.5px Sora,sans-serif;padding:6px 7px;outline:none}
 .filter-row select:focus{border-color:rgba(69,196,255,.5)}
 .filter-row select.active{border-color:rgba(69,196,255,.6);background:rgba(69,196,255,.1)}
 .filter-row select option{background:#181c30;color:#e8ebf5}
@@ -66,10 +66,10 @@ textarea{resize:vertical;font-family:Sora,sans-serif}
 .match-row.selected{background:rgba(255,77,148,.1);border-left-color:#ff4d94}
 .match-row.live{background:rgba(255,77,148,.1);border-left-color:#ff4d94}
 .match-top{display:flex;align-items:baseline;gap:6px}
-.match-opp{font:600 12.5px Sora,sans-serif;color:#c6cde0}
+.match-opp{font:600 14px Sora,sans-serif;color:#c6cde0}
 .match-row.selected .match-opp,.match-row.live .match-opp{font-weight:700;color:#fff}
-.match-meta{font:400 10.5px Sora,sans-serif;color:#6d7694}
-.sidebar-foot{padding:9px 14px;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px;font:400 10.5px Sora,sans-serif;color:#6d7694}
+.match-meta{font:400 12px Sora,sans-serif;color:#6d7694}
+.sidebar-foot{padding:9px 14px;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px;font:400 12px Sora,sans-serif;color:#6d7694}
 .sidebar-foot .link{margin-left:auto;color:#a9b2cc}
 .sidebar-foot .link + .link{margin-left:10px}
 
@@ -77,20 +77,20 @@ textarea{resize:vertical;font-family:Sora,sans-serif}
 .main{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
 .detail-hdr{padding:14px 20px 11px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;gap:9px}
 .detail-title-row{display:flex;align-items:center;gap:10px}
-.detail-title{font:700 17px Sora,sans-serif}
+.detail-title{font:700 19px Sora,sans-serif}
 .detail-chips{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .body{flex:1;display:flex;min-height:0}
 .notes-col{flex:1.35;display:flex;flex-direction:column;padding:12px 20px 14px;gap:9px;min-width:0;overflow-y:auto}
 .note{display:flex;gap:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:9px 12px}
 .note-actions{margin-left:auto;display:flex;gap:8px;opacity:0;flex:none;align-self:flex-start}
 .note:hover .note-actions{opacity:1}
-.note-actions span{cursor:pointer;color:#6d7694;font-size:12px}
+.note-actions span{cursor:pointer;color:#6d7694;font-size:13.5px}
 .note-actions span:hover{color:#e8ebf5}
 .note-actions span.danger:hover{color:#ff8f8f}
-.note-ts{font:700 11px ui-monospace,Consolas,monospace;color:#45c4ff;background:rgba(69,196,255,.12);border-radius:5px;padding:2px 7px;height:fit-content;flex:none;cursor:pointer}
-.note-time{font:400 10px ui-monospace,Consolas,monospace;color:#6d7694;margin-left:6px}
-.note-group{font:700 9.5px Sora,sans-serif;letter-spacing:.12em;color:#6d7694;margin-top:4px}
-.note-body{font:400 12px/1.5 Sora,sans-serif;color:#d4daea;flex:1}
+.note-ts{font:700 12.5px ui-monospace,Consolas,monospace;color:#45c4ff;background:rgba(69,196,255,.12);border-radius:5px;padding:2px 7px;height:fit-content;flex:none;cursor:pointer}
+.note-time{font:400 11px ui-monospace,Consolas,monospace;color:#6d7694;margin-left:6px}
+.note-group{font:700 10.5px Sora,sans-serif;letter-spacing:.12em;color:#6d7694;margin-top:4px}
+.note-body{font:400 13.5px/1.5 Sora,sans-serif;color:#d4daea;flex:1}
 .chip.game{background:rgba(69,196,255,.12);color:#45c4ff}
 .composer{margin-top:auto;display:flex;flex-direction:column;gap:7px}
 .composer-row{display:flex;gap:8px;align-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(69,196,255,.35);border-radius:10px;padding:9px 12px}
@@ -98,46 +98,46 @@ textarea{resize:vertical;font-family:Sora,sans-serif}
 .quicktags{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
 .quicktags .chip{cursor:pointer;border:1px solid transparent}
 .quicktags .chip.active{border-color:currentColor}
-.side-col{width:280px;flex:none;border-left:1px solid rgba(255,255,255,.07);padding:12px 16px 14px;display:flex;flex-direction:column;gap:11px;background:rgba(4,10,24,.35);overflow-y:auto}
-.slabel{font:700 11px Sora,sans-serif;letter-spacing:.12em;color:#6d7694}
+.side-col{width:310px;flex:none;border-left:1px solid rgba(255,255,255,.07);padding:12px 16px 14px;display:flex;flex-direction:column;gap:11px;background:rgba(4,10,24,.35);overflow-y:auto}
+.slabel{font:700 12.5px Sora,sans-serif;letter-spacing:.12em;color:#6d7694}
 .stat-box{flex:1;background:rgba(255,255,255,.05);border-radius:9px;padding:8px 10px;text-align:center}
-.stat-num{font:700 15px Sora,sans-serif}
-.stat-lbl{font:400 9.5px Sora,sans-serif;color:#6d7694}
-.habit-line{font:400 11px/1.5 Sora,sans-serif;color:#c6cde0;border-left:2px solid rgba(255,77,148,.5);padding-left:9px}
+.stat-num{font:700 17px Sora,sans-serif}
+.stat-lbl{font:400 10.5px Sora,sans-serif;color:#6d7694}
+.habit-line{font:400 12.5px/1.5 Sora,sans-serif;color:#c6cde0;border-left:2px solid rgba(255,77,148,.5);padding-left:9px}
 .plan-box{background:rgba(61,220,132,.08);border:1px solid rgba(61,220,132,.25);border-radius:9px;padding:8px 10px}
-.plan-label{font:600 9.5px Sora,sans-serif;color:#7fe8ad;letter-spacing:.08em}
-.plan-text{font:400 10.5px/1.5 Sora,sans-serif;color:#c6cde0;margin-top:3px;white-space:pre-wrap}
-.empty{font:400 11.5px Sora,sans-serif;color:#6d7694;padding:20px;text-align:center}
+.plan-label{font:600 10.5px Sora,sans-serif;color:#7fe8ad;letter-spacing:.08em}
+.plan-text{font:400 12px/1.5 Sora,sans-serif;color:#c6cde0;margin-top:3px;white-space:pre-wrap}
+.empty{font:400 13px Sora,sans-serif;color:#6d7694;padding:20px;text-align:center}
 
 /* ---- player page ---- */
 .player-hdr{padding:12px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.07)}
 .player-who{padding:18px 20px 14px;display:flex;align-items:center;gap:16px;border-bottom:1px solid rgba(255,255,255,.07)}
-.avatar{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#ff4d94,#8b6cff);display:flex;align-items:center;justify-content:center;font:800 20px Sora,sans-serif;color:#fff;flex:none}
+.avatar{width:58px;height:58px;border-radius:14px;background:linear-gradient(135deg,#ff4d94,#8b6cff);display:flex;align-items:center;justify-content:center;font:800 22.5px Sora,sans-serif;color:#fff;flex:none}
 .player-body{flex:1;display:flex;min-height:0;overflow:hidden}
 .player-col{flex:1;padding:14px 20px;display:flex;flex-direction:column;gap:10px;min-width:0;overflow-y:auto}
 .player-col.left{border-right:1px solid rgba(255,255,255,.07)}
 .set-row{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:9px 12px;display:flex;flex-direction:column;gap:4px;cursor:pointer}
 .set-row:hover{background:rgba(255,255,255,.07)}
-.sbar-row{display:flex;align-items:center;gap:8px;font:400 10.5px Sora,sans-serif;color:#a9b2cc}
-.sbar-name{width:90px;flex:none}
+.sbar-row{display:flex;align-items:center;gap:8px;font:400 12px Sora,sans-serif;color:#a9b2cc}
+.sbar-name{width:100px;flex:none}
 .sbar{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
 .sbar-fill{height:100%}
 
 /* ---- settings ---- */
 .settings-body{flex:1;display:flex;min-height:0}
-.settings-nav{width:170px;flex:none;padding:16px 12px;display:flex;flex-direction:column;gap:2px;border-right:1px solid rgba(255,255,255,.07)}
-.settings-nav div{padding:7px 10px;border-radius:8px;font:400 12px Sora,sans-serif;color:#8a93ad;cursor:pointer}
+.settings-nav{width:185px;flex:none;padding:16px 12px;display:flex;flex-direction:column;gap:2px;border-right:1px solid rgba(255,255,255,.07)}
+.settings-nav div{padding:7px 10px;border-radius:8px;font:400 13.5px Sora,sans-serif;color:#8a93ad;cursor:pointer}
 .settings-nav div:hover{background:rgba(255,255,255,.04)}
 .settings-nav div.active{background:rgba(69,196,255,.12);font-weight:600;color:#7dd7ff}
-.settings-main{flex:1;padding:18px 24px 24px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;max-width:720px}
-.settings-title{font:700 15px Sora,sans-serif}
-.settings-intro{font:400 11.5px/1.5 Sora,sans-serif;color:#8a93ad;margin-top:-10px}
+.settings-main{flex:1;padding:18px 24px 24px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;max-width:800px}
+.settings-title{font:700 17px Sora,sans-serif}
+.settings-intro{font:400 13px/1.5 Sora,sans-serif;color:#8a93ad;margin-top:-10px}
 .field{display:flex;flex-direction:column;gap:6px}
-.field-label{font:600 12.5px Sora,sans-serif;display:flex;align-items:baseline;gap:8px}
-.field-label .reset{margin-left:auto;font:400 10.5px Sora,sans-serif;color:#6d7694;cursor:pointer}
+.field-label{font:600 14px Sora,sans-serif;display:flex;align-items:baseline;gap:8px}
+.field-label .reset{margin-left:auto;font:400 12px Sora,sans-serif;color:#6d7694;cursor:pointer}
 .field-label .reset:hover{color:#45c4ff}
-.field-hint{font:400 10.5px/1.5 Sora,sans-serif;color:#6d7694}
-.field-hint code{font:400 10.5px ui-monospace,Consolas,monospace;background:rgba(255,255,255,.06);border-radius:4px;padding:1px 4px;color:#a9b2cc}
+.field-hint{font:400 12px/1.5 Sora,sans-serif;color:#6d7694}
+.field-hint code{font:400 12px ui-monospace,Consolas,monospace;background:rgba(255,255,255,.06);border-radius:4px;padding:1px 4px;color:#a9b2cc}
 .field-hint.ok{color:#7fe8ad}
 .field-hint.warn{color:#ffd166}
 .field-hint.bad{color:#ff8f8f}
@@ -154,16 +154,16 @@ textarea{resize:vertical;font-family:Sora,sans-serif}
 .opt-radio{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.3);flex:none;margin-top:2px;position:relative}
 .opt-card.selected .opt-radio{border-color:#45c4ff}
 .opt-card.selected .opt-radio::after{content:'';position:absolute;inset:2px;border-radius:50%;background:#45c4ff}
-.opt-title{font:600 12px Sora,sans-serif}
-.opt-desc{font:400 10.5px/1.5 Sora,sans-serif;color:#8a93ad;margin-top:2px}
-.callout{background:rgba(255,209,102,.08);border:1px solid rgba(255,209,102,.3);border-radius:10px;padding:10px 12px;font:400 11px/1.5 Sora,sans-serif;color:#ffd166}
+.opt-title{font:600 13.5px Sora,sans-serif}
+.opt-desc{font:400 12px/1.5 Sora,sans-serif;color:#8a93ad;margin-top:2px}
+.callout{background:rgba(255,209,102,.08);border:1px solid rgba(255,209,102,.3);border-radius:10px;padding:10px 12px;font:400 12.5px/1.5 Sora,sans-serif;color:#ffd166}
 .callout.info{background:rgba(69,196,255,.06);border-color:rgba(69,196,255,.25);color:#a9b2cc}
 .path-box{display:flex;flex-direction:column;gap:6px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px 12px}
-.path-row{display:flex;align-items:center;gap:10px;font:400 11px Sora,sans-serif}
+.path-row{display:flex;align-items:center;gap:10px;font:400 12.5px Sora,sans-serif}
 .path-row .lbl{color:#8a93ad;width:110px;flex:none}
-.path-row .val{color:#c6cde0;font:400 10.5px ui-monospace,Consolas,monospace;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.path-row .link{font-size:11px;flex:none}
-.saved-pill{margin-left:auto;font:600 10.5px Sora,sans-serif;color:#7fe8ad;opacity:0;transition:opacity .25s}
+.path-row .val{color:#c6cde0;font:400 12px ui-monospace,Consolas,monospace;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.path-row .link{font-size:12.5px;flex:none}
+.saved-pill{margin-left:auto;font:600 12px Sora,sans-serif;color:#7fe8ad;opacity:0;transition:opacity .25s}
 .saved-pill.show{opacity:1}
 .section-sep{height:1px;background:rgba(255,255,255,.07)}
 </style>
@@ -401,7 +401,7 @@ function matchRow(m, s, selected) {
     <div class="match-top">
       ${oppIcon ? `<span title="${esc(m.opponentCharacter)}" style="align-self:center;display:flex">${oppIcon}</span>` : ''}
       <span class="match-opp">${esc(m.opponent)}</span>
-      ${live ? '<span style="margin-left:auto;font:700 10.5px Sora,sans-serif;color:#ff9dc4">LIVE</span>' :
+      ${live ? '<span style="margin-left:auto;font:700 12px Sora,sans-serif;color:#ff9dc4">LIVE</span>' :
         (r ? `<span class="chip ${r.cls}" style="margin-left:auto">${r.text}</span>` : '')}
     </div>
     <div class="match-meta">${fmtDate(m.startedAt)}${m.notes.length ? ` · ${m.notes.length} note${m.notes.length === 1 ? '' : 's'}` : ''}</div>
@@ -415,9 +415,9 @@ function matchDetail(m, s) {
   return `
   <div class="detail-hdr">
     <div class="detail-title-row">
-      <div class="detail-title">vs <span class="link" style="color:inherit" title="open player page" data-click="openPlayer" data-arg="${esc(m.opponent)}">${esc(m.opponent)} <span style="color:#45c4ff;font-size:12px">↗</span></span></div>
-      ${live ? '<span class="row" style="gap:6px;background:rgba(255,77,148,.14);color:#ff9dc4;border-radius:6px;padding:3px 9px;font:700 11px Sora,sans-serif"><span class="dot" style="background:#ff4d94"></span>RECORDING</span>'
-             : (r ? `<span class="chip ${r.cls}" style="font-size:11px">${r.text}</span>` : '')}
+      <div class="detail-title">vs <span class="link" style="color:inherit" title="open player page" data-click="openPlayer" data-arg="${esc(m.opponent)}">${esc(m.opponent)} <span style="color:#45c4ff;font-size:13.5px">↗</span></span></div>
+      ${live ? '<span class="row" style="gap:6px;background:rgba(255,77,148,.14);color:#ff9dc4;border-radius:6px;padding:3px 9px;font:700 12.5px Sora,sans-serif"><span class="dot" style="background:#ff4d94"></span>RECORDING</span>'
+             : (r ? `<span class="chip ${r.cls}" style="font-size:12.5px">${r.text}</span>` : '')}
       <div style="margin-left:auto;display:flex;gap:8px">
         ${live ? '<div class="btn danger" data-click="stopRecording">■ Stop</div>' : ''}
         ${m.videoPath ? '<div class="btn" data-click="openVideo" data-arg="' + m.id + '">Show file</div>' : ''}
@@ -432,7 +432,7 @@ function matchDetail(m, s) {
   </div>
   <div class="body">
     <div class="notes-col">
-      <div class="row" style="gap:8px"><span class="slabel">NOTES</span><span class="muted" style="font-size:10.5px">by game of the set</span></div>
+      <div class="row" style="gap:8px"><span class="slabel">NOTES</span><span class="muted" style="font-size:12px">by game of the set</span></div>
       ${m.notes.length === 0 ? '<div class="empty">No notes yet.</div>' : notesList(m)}
       ${composer(m, live)}
     </div>
@@ -504,9 +504,9 @@ function noteEditor(n) {
       <div class="btn" data-click="cancelNoteEdit">Cancel</div>
     </div>
     <div class="quicktags">
-      <span class="muted" style="font-size:10px">game:</span>
+      <span class="muted" style="font-size:11px">game:</span>
       ${[1, 2, 3, 4, 5].map(g => `<span class="chip game ${ui.editingGame === g ? 'active' : ''}" data-click="pickEditGame" data-arg="${g}">G${g}</span>`).join('')}
-      <span class="muted" style="font-size:10px;margin-left:8px">tags:</span>
+      <span class="muted" style="font-size:11px;margin-left:8px">tags:</span>
       ${Object.keys(TAG_CLASSES).map(t => `<span class="chip ${TAG_CLASSES[t]} ${ui.editingTags.includes(t) ? 'active' : ''}" data-click="toggleEditTag" data-arg="${t}">#${t}</span>`).join('')}
     </div>
   </div>`;
@@ -542,10 +542,10 @@ function composer(m, live = true) {
       <div class="btn primary" data-click="addNote">Add</div>
     </div>
     <div class="quicktags">
-      <span class="muted" style="font-size:10px">game:</span>
+      <span class="muted" style="font-size:11px">game:</span>
       ${gameChips(m, live, game, 'pickComposerGame')}
-      ${live ? '' : '<span class="muted" style="font-size:9.5px">(click again for whole match)</span>'}
-      <span class="muted" style="font-size:10px;margin-left:8px">quick-tag:</span>
+      ${live ? '' : '<span class="muted" style="font-size:10.5px">(click again for whole match)</span>'}
+      <span class="muted" style="font-size:11px;margin-left:8px">quick-tag:</span>
       ${tags.map(t => `<span class="chip ${TAG_CLASSES[t]} ${ui.activeTags.includes(t) ? 'active' : ''}" data-click="toggleTag" data-arg="${t}">#${t}</span>`).join('')}
     </div>
   </div>`;
@@ -565,8 +565,8 @@ function scoutingPanel(opponent, s) {
     <div class="stat-box"><div class="stat-num" style="color:${losses > wins ? '#ff8f8f' : '#7fe8ad'}">${wins}–${losses}</div><div class="stat-lbl">sets vs you</div></div>
   </div>
   <div class="col" style="gap:8px">
-    <div class="slabel" style="color:#ff9dc4;font-size:10px">HABITS</div>
-    ${habits.length === 0 ? '<div class="muted" style="font-size:11px">Tag a note #habit to start building this.</div>' :
+    <div class="slabel" style="color:#ff9dc4;font-size:11px">HABITS</div>
+    ${habits.length === 0 ? '<div class="muted" style="font-size:12.5px">Tag a note #habit to start building this.</div>' :
       habits.slice(0, 5).map(h => `<div class="habit-line">${esc(stripInlineTags(h.text))}</div>`).join('')}
   </div>
   <div class="plan-box">
@@ -574,9 +574,9 @@ function scoutingPanel(opponent, s) {
     <div class="plan-text">${plan ? esc(plan) : '<span class="muted">No game plan yet — add one from the player page.</span>'}</div>
   </div>
   <div class="col" style="gap:6px;margin-top:auto">
-    <div class="slabel" style="font-size:10px">PAST SETS</div>
-    ${past.length === 0 ? '<div class="muted" style="font-size:10.5px">No finished sets recorded yet.</div>' :
-      past.slice(0, 4).map(m => `<div class="row" style="justify-content:space-between;font:400 10.5px Sora,sans-serif;color:#a9b2cc"><span>${fmtDate(m.startedAt)}</span><span class="${m.result === 'W' ? '' : ''}" style="color:${m.result === 'W' ? '#3ddc84' : '#ff6d6d'};font-weight:700">${m.result} ${m.gamesWon}–${m.gamesLost}</span></div>`).join('')}
+    <div class="slabel" style="font-size:11px">PAST SETS</div>
+    ${past.length === 0 ? '<div class="muted" style="font-size:12px">No finished sets recorded yet.</div>' :
+      past.slice(0, 4).map(m => `<div class="row" style="justify-content:space-between;font:400 12px Sora,sans-serif;color:#a9b2cc"><span>${fmtDate(m.startedAt)}</span><span class="${m.result === 'W' ? '' : ''}" style="color:${m.result === 'W' ? '#3ddc84' : '#ff6d6d'};font-weight:700">${m.result} ${m.gamesWon}–${m.gamesLost}</span></div>`).join('')}
   </div>`;
 }
 
@@ -604,14 +604,14 @@ function renderPlayer(s) {
   return `
   <div class="main" style="width:100%">
     <div class="player-hdr">
-      <span class="link" data-click="openLibrary">← Library</span><span class="muted">/</span><span style="font:600 12px Sora,sans-serif;color:#a9b2cc">Players</span>
-      <span style="margin-left:auto;font:600 13px Sora,sans-serif">${esc(opponent)}</span>
+      <span class="link" data-click="openLibrary">← Library</span><span class="muted">/</span><span style="font:600 13.5px Sora,sans-serif;color:#a9b2cc">Players</span>
+      <span style="margin-left:auto;font:600 14.5px Sora,sans-serif">${esc(opponent)}</span>
     </div>
     <div class="player-who">
       <div class="avatar">${initial(opponent)}</div>
       <div class="col" style="gap:3px">
-        <div style="font:800 19px Sora,sans-serif">${esc(opponent)}</div>
-        <div class="muted" style="font-size:11px">${matches.length} recorded match${matches.length === 1 ? '' : 'es'}</div>
+        <div style="font:800 21.5px Sora,sans-serif">${esc(opponent)}</div>
+        <div class="muted" style="font-size:12.5px">${matches.length} recorded match${matches.length === 1 ? '' : 'es'}</div>
       </div>
       <div class="row" style="margin-left:auto;gap:10px">
         <div class="stat-box"><div class="stat-num" style="color:${losses > wins ? '#ff8f8f' : '#7fe8ad'}">${wins}–${losses}</div><div class="stat-lbl">sets</div></div>
@@ -621,7 +621,7 @@ function renderPlayer(s) {
     </div>
     <div class="player-body">
       <div class="player-col left">
-        <div class="row" style="gap:8px"><span class="slabel" style="color:#ff9dc4">HABITS</span><span class="muted" style="font-size:10px">pinned from #habit notes</span></div>
+        <div class="row" style="gap:8px"><span class="slabel" style="color:#ff9dc4">HABITS</span><span class="muted" style="font-size:11px">pinned from #habit notes</span></div>
         ${habits.length === 0 ? '<div class="empty">No habits tagged yet.</div>' :
           habits.map(h => `<div class="habit-line" style="padding:10px 12px;background:rgba(255,77,148,.07);border:1px solid rgba(255,77,148,.22);border-radius:10px;border-left:none">${esc(stripInlineTags(h.text))}</div>`).join('')}
         <div class="row" style="gap:8px;margin-top:6px"><span class="slabel" style="color:#7fe8ad">GAME PLAN</span></div>
@@ -632,15 +632,15 @@ function renderPlayer(s) {
         ${matches.length === 0 ? '<div class="empty">Nothing recorded yet.</div>' : matches.map(m => `
           <div class="set-row" title="open match notes" data-click="openMatch" data-arg="${m.id}">
             <div class="row" style="gap:8px">
-              <span style="font:600 11.5px Sora,sans-serif">${fmtDate(m.startedAt)}</span>
-              <span class="muted" style="font-size:10.5px">${(m.stages || []).join(', ')}</span>
-              ${m.result ? `<span class="chip ${m.result === 'W' ? 'win' : 'loss'}" style="margin-left:auto">${m.result} ${m.gamesWon}–${m.gamesLost}</span>` : '<span class="muted" style="margin-left:auto;font-size:10.5px">not scored</span>'}
+              <span style="font:600 13px Sora,sans-serif">${fmtDate(m.startedAt)}</span>
+              <span class="muted" style="font-size:12px">${(m.stages || []).join(', ')}</span>
+              ${m.result ? `<span class="chip ${m.result === 'W' ? 'win' : 'loss'}" style="margin-left:auto">${m.result} ${m.gamesWon}–${m.gamesLost}</span>` : '<span class="muted" style="margin-left:auto;font-size:12px">not scored</span>'}
             </div>
-            <div class="muted" style="font-size:10px">${m.notes.length} note${m.notes.length === 1 ? '' : 's'}${m.videoPath ? ' · has video' : ''}</div>
+            <div class="muted" style="font-size:11px">${m.notes.length} note${m.notes.length === 1 ? '' : 's'}${m.videoPath ? ' · has video' : ''}</div>
           </div>`).join('')}
         ${Object.keys(stageMap).length ? `
           <div class="col" style="gap:6px;margin-top:auto;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px 12px">
-            <div class="slabel" style="font-size:10px">STAGES VS ${esc(opponent.toUpperCase())}</div>
+            <div class="slabel" style="font-size:11px">STAGES VS ${esc(opponent.toUpperCase())}</div>
             ${Object.entries(stageMap).map(([st, v]) => {
               const total = v.w + v.l, pct = total ? Math.round(100 * v.w / total) : 0;
               return `<div class="sbar-row"><span class="sbar-name">${esc(st)}</span><div class="sbar"><div class="sbar-fill" style="width:${pct}%;background:${pct >= 50 ? '#3ddc84' : '#ff6d6d'}"></div></div><span>${v.w}–${v.l}</span></div>`;
@@ -661,8 +661,8 @@ function renderLive(s) {
     return `
     <div class="main" style="width:100%">
       <div class="player-hdr">
-        ${overlay ? '<span style="font:700 11px Sora,sans-serif;letter-spacing:.1em;color:#ff9dc4">LIVE MATCH</span>'
-                  : '<span class="link" data-click="openLibrary">← Library</span><span class="muted">/</span><span style="font:600 12px Sora,sans-serif;color:#a9b2cc">Live match</span>'}
+        ${overlay ? '<span style="font:700 12.5px Sora,sans-serif;letter-spacing:.1em;color:#ff9dc4">LIVE MATCH</span>'
+                  : '<span class="link" data-click="openLibrary">← Library</span><span class="muted">/</span><span style="font:600 13.5px Sora,sans-serif;color:#a9b2cc">Live match</span>'}
       </div>
       <div class="empty" style="margin:auto">No match in progress right now.<br>This ${overlay ? 'window opens' : 'page opens automatically'} when a match is found.</div>
     </div>`;
@@ -678,28 +678,28 @@ function renderLive(s) {
   const plan = s.gamePlans[opponent.toLowerCase()] || '';
 
   const phaseChip = striking
-    ? `<span class="row" style="gap:6px;background:rgba(255,209,102,.12);color:#ffd166;border-radius:6px;padding:4px 10px;font:700 11px Sora,sans-serif"><span class="dot" style="background:#ffd166;box-shadow:0 0 6px #ffd166"></span>STAGE STRIKING${overlay ? '' : ' · recording starts at game 1'}</span>`
-    : `<span class="row" style="gap:10px"><span class="row" style="gap:6px;background:rgba(255,77,148,.14);color:#ff9dc4;border-radius:6px;padding:4px 10px;font:700 11px Sora,sans-serif"><span class="dot" style="background:#ff4d94;box-shadow:0 0 6px #ff4d94"></span>RECORDING</span><span class="btn danger" data-click="stopRecording">■ Stop</span></span>`;
+    ? `<span class="row" style="gap:6px;background:rgba(255,209,102,.12);color:#ffd166;border-radius:6px;padding:4px 10px;font:700 12.5px Sora,sans-serif"><span class="dot" style="background:#ffd166;box-shadow:0 0 6px #ffd166"></span>STAGE STRIKING${overlay ? '' : ' · recording starts at game 1'}</span>`
+    : `<span class="row" style="gap:10px"><span class="row" style="gap:6px;background:rgba(255,77,148,.14);color:#ff9dc4;border-radius:6px;padding:4px 10px;font:700 12.5px Sora,sans-serif"><span class="dot" style="background:#ff4d94;box-shadow:0 0 6px #ff4d94"></span>RECORDING</span><span class="btn danger" data-click="stopRecording">■ Stop</span></span>`;
 
   const sideInner = `
     <div class="col" style="gap:8px">
-      <div class="slabel" style="color:#ff9dc4;font-size:10px">THEIR HABITS</div>
-      ${habits.length === 0 ? '<div class="muted" style="font-size:11px">No #habit notes from earlier matches yet.</div>' :
+      <div class="slabel" style="color:#ff9dc4;font-size:11px">THEIR HABITS</div>
+      ${habits.length === 0 ? '<div class="muted" style="font-size:12.5px">No #habit notes from earlier matches yet.</div>' :
         habits.slice(0, overlay ? 3 : 6).map(h => `<div class="habit-line">${esc(stripInlineTags(h.text))}</div>`).join('')}
     </div>
     <div class="col" style="gap:6px">
-      <div class="slabel" style="color:#7fe8ad;font-size:10px">GAME PLAN</div>
+      <div class="slabel" style="color:#7fe8ad;font-size:11px">GAME PLAN</div>
       <textarea id="gamePlanInput" rows="${overlay ? 2 : 4}" placeholder="Game plan for ${esc(opponent)}…" data-blur="saveGamePlan">${esc(plan)}</textarea>
     </div>
     <div class="col" style="gap:6px;${overlay ? '' : 'margin-top:auto'}">
-      <div class="slabel" style="font-size:10px">PAST SETS</div>
-      ${finished.length === 0 ? '<div class="muted" style="font-size:10.5px">No finished sets recorded yet.</div>' :
-        finished.slice(0, overlay ? 3 : 5).map(x => `<div class="row" style="justify-content:space-between;font:400 10.5px Sora,sans-serif;color:#a9b2cc"><span>${fmtDate(x.startedAt)}</span><span style="color:${x.result === 'W' ? '#3ddc84' : '#ff6d6d'};font-weight:700">${x.result} ${x.gamesWon}–${x.gamesLost}</span></div>`).join('')}
+      <div class="slabel" style="font-size:11px">PAST SETS</div>
+      ${finished.length === 0 ? '<div class="muted" style="font-size:12px">No finished sets recorded yet.</div>' :
+        finished.slice(0, overlay ? 3 : 5).map(x => `<div class="row" style="justify-content:space-between;font:400 12px Sora,sans-serif;color:#a9b2cc"><span>${fmtDate(x.startedAt)}</span><span style="color:${x.result === 'W' ? '#3ddc84' : '#ff6d6d'};font-weight:700">${x.result} ${x.gamesWon}–${x.gamesLost}</span></div>`).join('')}
     </div>`;
 
   const notesCol = `
     <div class="notes-col" style="${overlay ? 'padding:10px 14px 12px' : ''}">
-      <div class="row" style="gap:8px"><span class="slabel">MATCH NOTES</span><span class="muted" style="font-size:10.5px">${striking ? 'notes attach to game 1' : `notes attach to game ${rec.currentGame || 1}`}</span></div>
+      <div class="row" style="gap:8px"><span class="slabel">MATCH NOTES</span><span class="muted" style="font-size:12px">${striking ? 'notes attach to game 1' : `notes attach to game ${rec.currentGame || 1}`}</span></div>
       ${m.notes.length === 0 ? '<div class="empty">Nothing yet — what do you notice?</div>' : notesList(m)}
       ${composer(m)}
     </div>`;
@@ -707,15 +707,15 @@ function renderLive(s) {
   return `
   <div class="main" style="width:100%">
     <div class="player-hdr" style="${overlay ? 'padding:9px 14px' : ''}">
-      ${overlay ? '<span style="font:700 11px Sora,sans-serif;letter-spacing:.1em;color:#ff9dc4">LIVE MATCH</span>'
-                : '<span class="link" data-click="openLibrary">← Library</span><span class="muted">/</span><span style="font:600 12px Sora,sans-serif;color:#a9b2cc">Live match</span>'}
+      ${overlay ? '<span style="font:700 12.5px Sora,sans-serif;letter-spacing:.1em;color:#ff9dc4">LIVE MATCH</span>'
+                : '<span class="link" data-click="openLibrary">← Library</span><span class="muted">/</span><span style="font:600 13.5px Sora,sans-serif;color:#a9b2cc">Live match</span>'}
       <span style="margin-left:auto" class="row">${phaseChip}</span>
     </div>
     <div class="player-who" style="${overlay ? 'padding:11px 14px 9px;gap:11px' : ''}">
-      <div class="avatar" style="${overlay ? 'width:40px;height:40px;font-size:16px;border-radius:11px' : ''}">${initial(opponent)}</div>
+      <div class="avatar" style="${overlay ? 'width:40px;height:40px;font-size:18px;border-radius:11px' : ''}">${initial(opponent)}</div>
       <div class="col" style="gap:3px">
-        <div style="font:800 ${overlay ? '15px' : '19px'} Sora,sans-serif">vs ${overlay ? esc(opponent) : `<span class="link" style="color:inherit" title="open player page" data-click="openPlayer" data-arg="${esc(opponent)}">${esc(opponent)} <span style="color:#45c4ff;font-size:12px">↗</span></span>`}</div>
-        <div class="muted" style="font-size:${overlay ? '10px' : '11px'}">${past.length === 0 ? 'first recorded match against this player' : `${past.length} recorded match${past.length === 1 ? '' : 'es'} before this one`}</div>
+        <div style="font:800 ${overlay ? '17px' : '21.5px'} Sora,sans-serif">vs ${overlay ? esc(opponent) : `<span class="link" style="color:inherit" title="open player page" data-click="openPlayer" data-arg="${esc(opponent)}">${esc(opponent)} <span style="color:#45c4ff;font-size:13.5px">↗</span></span>`}</div>
+        <div class="muted" style="font-size:${overlay ? '11px' : '12.5px'}">${past.length === 0 ? 'first recorded match against this player' : `${past.length} recorded match${past.length === 1 ? '' : 'es'} before this one`}</div>
         ${m.myCharacter || m.opponentCharacter || (m.stages || []).length ? `
         <div class="row" style="gap:5px;flex-wrap:wrap;margin-top:2px">
           ${m.myCharacter ? `<span class="chip" style="background:rgba(255,77,148,.14);color:#ff9dc4">${charIcon(m.myCharacter)}${esc(m.myCharacter)}</span>` : ''}
@@ -780,7 +780,7 @@ function renderSettings(s) {
   return `
   <div class="main" style="width:100%">
     <div class="player-hdr">
-      <span class="link" data-click="openLibrary">← Library</span><span class="muted">/</span><span style="font:600 12px Sora,sans-serif;color:#a9b2cc">Settings</span>
+      <span class="link" data-click="openLibrary">← Library</span><span class="muted">/</span><span style="font:600 13.5px Sora,sans-serif;color:#a9b2cc">Settings</span>
       <span class="saved-pill ${ui.settingsSaved ? 'show' : ''}">✓ Saved</span>
     </div>
     <div class="settings-body">
@@ -822,7 +822,7 @@ function renderSettingsRecording(c) {
       <div class="toggle-track" style="background:${c.deleteOriginalAfterRemux ? '#45c4ff' : 'rgba(255,255,255,.14)'}">
         <div class="toggle-thumb" style="${c.deleteOriginalAfterRemux ? 'right:2px' : 'left:2px'}"></div>
       </div>
-      <div class="col"><span style="font:600 12px Sora,sans-serif">Delete original after remux</span><span class="field-hint">If OBS is set to auto-remux (e.g. .mkv → .mp4), remove the original once the remuxed copy is renamed and looks complete. Has no effect when OBS doesn't remux.</span></div>
+      <div class="col"><span style="font:600 13.5px Sora,sans-serif">Delete original after remux</span><span class="field-hint">If OBS is set to auto-remux (e.g. .mkv → .mp4), remove the original once the remuxed copy is renamed and looks complete. Has no effect when OBS doesn't remux.</span></div>
     </div>`;
 }
 
@@ -861,11 +861,11 @@ function renderSettingsObs(c) {
     ${wsStatus}
     <div class="row" style="gap:14px;align-items:flex-start">
       <div class="field" style="width:180px;flex:none">
-        <div class="field-label" style="font-size:11.5px">Port</div>
+        <div class="field-label" style="font-size:13px">Port</div>
         <input id="cfgObsWsPort" type="text" inputmode="numeric" value="${c.obsWsPort ?? ''}" placeholder="${esc(autoPort)}" data-blur="saveSettings" data-enter="blurField">
       </div>
       <div class="field" style="flex:1">
-        <div class="field-label" style="font-size:11.5px">Password <span class="reset" data-click="toggleWsPassword">${ui.showWsPassword ? 'hide' : 'show'}</span></div>
+        <div class="field-label" style="font-size:13px">Password <span class="reset" data-click="toggleWsPassword">${ui.showWsPassword ? 'hide' : 'show'}</span></div>
         <input id="cfgObsWsPassword" type="${ui.showWsPassword ? 'text' : 'password'}" value="${esc(c.obsWsPassword || '')}" placeholder="${esc(autoPw)}" data-blur="saveSettings" data-enter="blurField" autocomplete="off">
       </div>
     </div>

@@ -14,7 +14,7 @@ internal sealed class BriefingWindow : Form
     public BriefingWindow(string opponent, AppData data)
     {
         Text = "PeakRecorder — Match Found";
-        ClientSize = new Size(900, 640);
+        ClientSize = new Size(1040, 740);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;

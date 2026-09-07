@@ -61,8 +61,8 @@ internal sealed class MainWindow : Form
             FormBorderStyle = FormBorderStyle.SizableToolWindow;
             TopMost = true;
             ShowInTaskbar = false;
-            MinimumSize = new Size(360, 460);
-            ClientSize = new Size(470, 690);
+            MinimumSize = new Size(400, 520);
+            ClientSize = new Size(540, 790);
             StartPosition = FormStartPosition.Manual;
             var wa = Screen.PrimaryScreen!.WorkingArea;
             Location = new Point(wa.Right - Width - 24, wa.Top + 24);
@@ -71,8 +71,8 @@ internal sealed class MainWindow : Form
         else
         {
             Text = "PeakRecorder";
-            ClientSize = new Size(1080, 680);
-            MinimumSize = new Size(760, 480);
+            ClientSize = new Size(1240, 780);
+            MinimumSize = new Size(860, 540);
             StartPosition = FormStartPosition.CenterScreen;
         }
         Controls.Add(_web);
