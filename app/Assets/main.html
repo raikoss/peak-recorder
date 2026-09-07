@@ -79,7 +79,6 @@ textarea{resize:vertical;font-family:Sora,sans-serif}
 .detail-title-row{display:flex;align-items:center;gap:10px}
 .detail-title{font:700 17px Sora,sans-serif}
 .detail-chips{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.editable-chip{border:1px dashed rgba(255,255,255,.22);border-radius:6px;padding:3px 9px;font:400 10.5px Sora,sans-serif;color:#6d7694;cursor:pointer}
 .body{flex:1;display:flex;min-height:0}
 .notes-col{flex:1.35;display:flex;flex-direction:column;padding:12px 20px 14px;gap:9px;min-width:0;overflow-y:auto}
 .note{display:flex;gap:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:9px 12px}
@@ -427,11 +426,9 @@ function matchDetail(m, s) {
     </div>
     <div class="detail-chips">
       ${stages}
-      <span class="editable-chip" data-click="editMeta" data-arg="${m.id}">edit result / stages / characters</span>
       ${m.myCharacter ? `<span class="chip" style="background:rgba(255,77,148,.14);color:#ff9dc4">${charIcon(m.myCharacter)}${esc(m.myCharacter)}</span>` : ''}
       ${m.opponentCharacter ? `<span class="chip" style="background:rgba(139,108,255,.16);color:#c3b3ff">${charIcon(m.opponentCharacter)}${esc(m.opponentCharacter)}</span>` : ''}
     </div>
-    <div id="metaEditor-${m.id}"></div>
   </div>
   <div class="body">
     <div class="notes-col">
@@ -1041,23 +1038,6 @@ const handlers = {
   editFocus() {
     const val = prompt('This week\'s focus:', S.data.focusGoal || '');
     if (val !== null) post({ action: 'setFocusGoal', text: val });
-  },
-  editMeta(el, id) {
-    const m = S.data.matches.find(x => x.id === id);
-    if (!m) return;
-    const result = prompt('Result (W / L / blank):', m.result || '');
-    if (result === null) return;
-    const gw = parseInt(prompt('Games won:', m.gamesWon || 0)) || 0;
-    const gl = parseInt(prompt('Games lost:', m.gamesLost || 0)) || 0;
-    const stages = prompt('Stages (comma separated):', (m.stages || []).join(', ')) || '';
-    const myChar = prompt('Your character:', m.myCharacter || '') || '';
-    const oppChar = prompt('Opponent character:', m.opponentCharacter || '') || '';
-    post({
-      action: 'updateMatchMeta', matchId: id,
-      result: result.trim().toUpperCase() || null, gamesWon: gw, gamesLost: gl,
-      stages: stages.split(',').map(x => x.trim()).filter(Boolean),
-      myCharacter: myChar.trim() || null, opponentCharacter: oppChar.trim() || null,
-    });
   },
   saveGamePlan(el) {
     const opponent = S.data.page === 'live' ? S.data.recording.opponent : S.data.playerName;

@@ -25,9 +25,8 @@ public sealed class MatchRecord
     public DateTime? EndedAt { get; set; }
     public string? VideoPath { get; set; }
 
-    // Nothing below this line is auto-detected today — the extension only
-    // reports opponent + match id, so result/stages/characters are filled in
-    // by hand from the library view after the fact.
+    // Everything below is auto-detected: stages/characters arrive per game
+    // via ApplyGameInfo, result/score via SetMatchResult when the set ends.
     public string? Result { get; set; } // "W" | "L" | null
     public int GamesWon { get; set; }
     public int GamesLost { get; set; }
@@ -278,28 +277,6 @@ public sealed class Store
             new Note { TimestampSeconds = timestampSeconds, GameNumber = gameNumber, Text = text.Trim(), Tags = tags }));
     }
 
-    public void UpdateMatchMeta(string matchRecordId, string? result, int gamesWon, int gamesLost,
-        List<string> stages, string? myCharacter, string? opponentCharacter)
-    {
-        Mutate(conn =>
-        {
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = """
-                UPDATE matches SET result = $result, games_won = $won, games_lost = $lost,
-                    stages = $stages, my_character = $mine, opponent_character = $theirs
-                WHERE id = $id
-                """;
-            cmd.Parameters.AddWithValue("$result", (object?)result ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("$won", gamesWon);
-            cmd.Parameters.AddWithValue("$lost", gamesLost);
-            cmd.Parameters.AddWithValue("$stages", JsonSerializer.Serialize(stages));
-            cmd.Parameters.AddWithValue("$mine", (object?)myCharacter ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("$theirs", (object?)opponentCharacter ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("$id", matchRecordId);
-            cmd.ExecuteNonQuery();
-        });
-    }
-
     /// <summary>Auto-detected stage/character picks from the extension. The
     /// stage is appended to the per-game list (skipping consecutive repeats,
     /// which in practice are duplicate reports); characters are overwritten
@@ -361,7 +338,7 @@ public sealed class Store
     }
 
     /// <summary>Auto-detected result reported by the extension when a match
-    /// finishes; stages/characters stay manual (UpdateMatchMeta).</summary>
+    /// finishes; stages/characters arrive per game via ApplyGameInfo.</summary>
     public void SetMatchResult(string matchRecordId, string result, int gamesWon, int gamesLost)
     {
         Mutate(conn =>

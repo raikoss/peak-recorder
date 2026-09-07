@@ -300,17 +300,6 @@ internal sealed class MainWindow : Form
                     _store.DeleteNote(msg!["noteId"]!.GetValue<long>());
                     break;
 
-                case "updateMatchMeta":
-                    _store.UpdateMatchMeta(
-                        msg!["matchId"]!.GetValue<string>(),
-                        msg["result"]?.GetValue<string>(),
-                        msg["gamesWon"]?.GetValue<int>() ?? 0,
-                        msg["gamesLost"]?.GetValue<int>() ?? 0,
-                        msg["stages"]?.AsArray().Select(n => n!.GetValue<string>()).ToList() ?? [],
-                        msg["myCharacter"]?.GetValue<string>(),
-                        msg["opponentCharacter"]?.GetValue<string>());
-                    break;
-
                 case "setFocusGoal":
                     _store.SetFocusGoal(msg!["text"]?.GetValue<string>() ?? "");
                     break;
