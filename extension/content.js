@@ -113,19 +113,51 @@
   // The "Active Player" sidebar links to my own profile (avatar-only link)
   // and sits next to the /settings/user link. Walk up from the settings link
   // until a container that also holds a player link; that player is me.
+  //
+  // Re-read the sidebar on every call: the site is an SPA and the user can
+  // switch "Active Player" (e.g. to a smurf) without a page reload, so a
+  // cached id would keep pointing at the previous account. The cached value
+  // is only used while the sidebar is momentarily absent from the DOM.
   function detectMyId() {
-    if (state.myIdAuto) return state.myIdAuto;
     const settings = document.querySelector('a[href*="/settings/user"]');
     let el = settings ? settings.parentElement : null;
     while (el && el !== document.body) {
       const link = el.querySelector(PLAYER_LINK_SEL);
       const m = link && (link.getAttribute("href") || "").match(PLAYER_ID_RE);
       if (m) {
-        state.myIdAuto = m[1];
-        chrome.storage.local.set({ myIdAuto: m[1] });
-        log("auto-detected my player id:", m[1]);
+        if (state.myIdAuto !== m[1]) {
+          log("active player id:", m[1], state.myIdAuto ? `(was ${state.myIdAuto})` : "");
+          state.myIdAuto = m[1];
+          state.myNameAuto = null; // stale name belongs to the previous account
+          chrome.storage.local.set({ myIdAuto: m[1], myNameAuto: null });
+        }
+        // The same sidebar shows "Active Player: <name>" — take the name from
+        // there so the popup is right even before the next match page.
+        const name = sidebarPlayerName(el);
+        if (name && state.myNameAuto !== name) {
+          state.myNameAuto = name;
+          chrome.storage.local.set({ myNameAuto: name });
+        }
         return m[1];
       }
+      el = el.parentElement;
+    }
+    return state.myIdAuto;
+  }
+
+  // The "Active Player: <name>" paragraph is a sibling of the avatar/settings
+  // container, so walk up a few ancestors from it (stopping at the sidebar
+  // <aside>) and return the bold name span's text.
+  function sidebarPlayerName(container) {
+    let el = container;
+    for (let i = 0; el && el !== document.body && i < 6; i++) {
+      for (const p of el.querySelectorAll("p")) {
+        if (!/^\s*Active Player/i.test(p.textContent)) continue;
+        const span = p.querySelector("span");
+        const name = (span ? span.textContent : "").trim();
+        if (name && name.length <= 40) return name;
+      }
+      if (el.tagName === "ASIDE") break;
       el = el.parentElement;
     }
     return null;
