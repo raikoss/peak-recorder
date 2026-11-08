@@ -12,6 +12,9 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
+    env:
+      AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+      AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
 
     steps:
       - name: Checkout
@@ -58,6 +61,22 @@ jobs:
           }
           Get-Content dist/self-contained/extension/manifest.json
 
+      - name: Sign Firefox add-on (AMO unlisted)
+        # Skipped (release still goes out, Chrome-only) until the secrets exist.
+        if: env.AMO_JWT_ISSUER != ''
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          npx --yes web-ext@8 sign `
+            --source-dir dist/self-contained/extension `
+            --artifacts-dir web-ext-artifacts `
+            --channel unlisted `
+            --api-key $env:AMO_JWT_ISSUER `
+            --api-secret $env:AMO_JWT_SECRET
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $xpi = Get-ChildItem web-ext-artifacts/*.xpi | Select-Object -First 1
+          Move-Item $xpi.FullName "PeakRecorder-firefox-$version.xpi"
+
       - name: Create zips
         shell: pwsh
         run: |
@@ -73,13 +92,17 @@ jobs:
         with:
           name: PeakRecorder ${{ steps.version.outputs.version }}
           generate_release_notes: true
+          fail_on_unmatched_files: false
           files: |
             PeakRecorder-${{ steps.version.outputs.version }}.zip
             PeakRecorder-${{ steps.version.outputs.version }}-requires-dotnet8.zip
+            PeakRecorder-firefox-${{ steps.version.outputs.version }}.xpi
           body: |
             ## Downloads
 
             - **PeakRecorder-${{ steps.version.outputs.version }}.zip** – everything included, just extract and run `app/PeakRecorder.exe`. Pick this one if unsure.
             - **PeakRecorder-${{ steps.version.outputs.version }}-requires-dotnet8.zip** – much smaller, but you need the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) installed first.
+
+            - **PeakRecorder-firefox-${{ steps.version.outputs.version }}.xpi** – the Firefox extension (signed by Mozilla). Open it in Firefox to install. You still need one of the zips above for the app.
 
             Both zips contain the `extension` folder for Chrome. See the [README](https://github.com/${{ github.repository }}#readme) for setup steps.

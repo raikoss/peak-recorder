@@ -8,8 +8,9 @@ internal static class Program
     private static void Main(string[] args)
     {
         // Chrome invokes us as a native messaging host with the extension
-        // origin as an argument; handle that mode without any UI.
-        if (args.Any(a => a.StartsWith("chrome-extension://")))
+        // origin as an argument; Firefox passes the host manifest path and
+        // the add-on ID instead. Handle that mode without any UI.
+        if (args.Any(a => a.StartsWith("chrome-extension://") || a == NativeHost.FirefoxExtensionId))
         {
             NativeHost.Run();
             return;
@@ -125,6 +126,9 @@ internal sealed class TrayAppContext : ApplicationContext
             MessageBox.Show($"Could not start the local server on port {_config.BridgePort}:\n{ex.Message}",
                 "PeakRecorder", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+
+        try { NativeHost.RegisterFirefox(); }
+        catch (Exception ex) { Log.Write($"Firefox native host registration failed: {ex.Message}"); }
 
         Log.Write("PeakRecorder started.");
 

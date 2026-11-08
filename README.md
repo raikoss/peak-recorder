@@ -24,7 +24,7 @@ It is made of two pieces that talk to each other:
 
 - Windows 10 or 11
 - [OBS Studio](https://obsproject.com/) set up to capture your Switch, with recording settings the way you like them
-- Google Chrome (or another Chromium browser like Brave, Edge or Arc)
+- Google Chrome (or another Chromium browser like Brave, Edge or Arc), or Firefox 128 or newer
 - The free [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0), only if you want to build the app yourself instead of downloading it (see below)
 
 ## Getting started
@@ -74,6 +74,14 @@ This needs to run once to register with the extension, so that the extension can
 4. Click the puzzle-piece icon in Chrome's toolbar and pin **Smash the Peak Recorder** so you can see its icon.
 
 Click the icon: it should say **Companion app connected**. If it says the app isn't running, make sure you started `PeakRecorder.exe` in step 2.
+
+### Installing the Firefox extension
+
+1. Download `PeakRecorder-firefox-x.y.z.xpi` from the [releases page](https://github.com/raikoss/peak-recorder/releases) (you still need the app from one of the zips).
+2. Open the `.xpi` in Firefox (or drag it into a Firefox window) and click **Add**.
+3. Click the puzzle-piece icon in the toolbar and pin **Smash the Peak Recorder**.
+
+If you're working on the extension itself, open `about:debugging`, go to **This Firefox**, click **Load Temporary Add-on** and pick `extension/manifest.json`. Temporary add-ons are removed when Firefox restarts.
 
 ### Playing
 
@@ -148,7 +156,7 @@ All of these are on the Settings page in the app; the names below are what they'
 
 Technical details for anyone who wants to poke at the code.
 
-- **Extension** (`extension/`): Manifest V3. `content.js` reads the match page and sends events to `http://127.0.0.1:8123`. `background.js` polls the app's status and sets the toolbar icon. Native messaging (`eu.smashthepeak.peakrecorder`, registered by the app under `HKCU\Software\Google\Chrome\NativeMessagingHosts`) is used to launch the app from the browser.
+- **Extension** (`extension/`): Manifest V3. `content.js` reads the match page and sends events to `http://127.0.0.1:8123`. `background.js` polls the app's status and sets the toolbar icon. Native messaging (`eu.smashthepeak.peakrecorder`, registered by the app under `HKCU\Software\Google\Chrome\NativeMessagingHosts`) is used to launch the app from the browser. The same folder loads in Firefox: the manifest declares both `background.service_worker` (Chromium) and `background.scripts` (Firefox), and fixes the Firefox add-on ID to `peakrecorder@smashthepeak.eu`. The app registers the Firefox native host at startup under `HKCU\Software\Mozilla\NativeMessagingHosts`. Releases sign the Firefox build through AMO's unlisted channel (`AMO_JWT_ISSUER` / `AMO_JWT_SECRET` repo secrets).
 - **App** (`app/`): .NET 8 WinForms tray app. The main window and briefing card are a WebView2 page (`Assets/main.html`). Storage is SQLite via `Microsoft.Data.Sqlite`. OBS is controlled via obs-websocket 5.
 - **Bridge API** on `127.0.0.1:<BridgePort>`:
 

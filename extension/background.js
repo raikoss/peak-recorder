@@ -6,6 +6,12 @@
 const BRIDGE_BASE = "http://127.0.0.1:8123";
 const HOST_NAME = "eu.smashthepeak.peakrecorder";
 
+// Status checks give up after this long. With the app closed, Windows retries
+// the refused loopback connection for ~2 s (and Firefox retries on top of
+// that), so without a cap the "app not running" warning shows up late. A
+// running app answers /status in milliseconds.
+const STATUS_TIMEOUT_MS = 2000;
+
 let registeredThisLife = false;
 
 // ---- toolbar icon ----------------------------------------------------------
@@ -34,10 +40,12 @@ function setIconState(state) {
 
 async function checkStatus() {
   try {
-    const r = await fetch(`${BRIDGE_BASE}/status`);
+    const r = await fetch(`${BRIDGE_BASE}/status`, { signal: AbortSignal.timeout(STATUS_TIMEOUT_MS) });
     const s = await r.json();
     setIconState(s.recording ? "rec" : "ok");
-    if (!registeredThisLife) {
+    // Firefox IDs look like "x@y" and the app registers the Firefox host
+    // itself at startup (fixed ID), so only Chromium needs to report its ID.
+    if (!registeredThisLife && !chrome.runtime.id.includes("@")) {
       registeredThisLife = true;
       // Tell the app our extension ID so it can register itself as a native
       // messaging host (enables the "Start companion app" popup button).
@@ -81,6 +89,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       method: msg.method || "POST",
       headers: { "Content-Type": "application/json" },
     };
+    // Only the status probe gets the short timeout; events may legitimately
+    // take a while (the app waits on OBS when starting/stopping a recording).
+    if (msg.path === "status") opts.signal = AbortSignal.timeout(STATUS_TIMEOUT_MS);
     if (opts.method !== "GET" && msg.body !== undefined) {
       opts.body = JSON.stringify(msg.body);
     }
